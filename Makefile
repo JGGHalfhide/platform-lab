@@ -1,6 +1,9 @@
-.PHONY: up down verify
+.PHONY: host up down verify
 
-up:
+host:
+	./scripts/host-bootstrap.sh
+
+up: host
 	cd terraform && terraform init -upgrade && terraform apply -auto-approve
 	cd ansible && ansible-playbook -i inventory.ini site.yml
 

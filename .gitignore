@@ -9,3 +9,5 @@ kubeconfig*
 .env
 *.retry
 __pycache__/
+tfplan
+*.tfplan
