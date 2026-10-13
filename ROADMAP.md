@@ -36,12 +36,14 @@ Goal: `make up` builds a Ready, CIS-profile RKE2 cluster from nothing.
 - [x] Terraform: one VM (4 vCPU, 8GB RAM, 40GB disk), COW volume, cloud-init with SSH key, IP output
   - dmacvicar/libvirt `~> 0.9.9`. VM `build-node-01`, user `rocky`, key-only SSH. Outputs `vm_ip`, `ssh_command`.
   - Gotcha: the 0.9 provider starts q35 guests with `acpi=off` unless `features = { acpi = true, apic = {} }` is set; without it the guest never gets a DHCP lease.
-- [ ] Prereq: `ansible-core` and `ansible-lint` installed on the build host (not installed as of 10/13)
-- [ ] Ansible: inventory generated from Terraform output (generated file is gitignored); base role (updates, chrony, firewall, NetworkManager, SELinux enforcing)
-  - Firewall: RKE2 docs say firewalld conflicts with Canal and should be disabled; the STIG requires it on. Decide before writing the role (see Open questions).
+- [x] Prereq: `ansible-core` and `ansible-lint` installed on the build host (pacman `ansible` 14.5.0 / ansible-core 2.21.5, `ansible-lint` 26.10.0)
+- [x] Ansible: inventory generated from Terraform output (generated file is gitignored); base role (updates, chrony, firewall, NetworkManager, SELinux enforcing)
+  - `make inventory` writes `ansible/inventory.ini` from `vm_ip`. Second run reports `changed=0`; ansible-lint passes at the `production` profile.
+  - Firewall: decided option (a), firewalld on. RKE2 ports open in `public`; 10.42.0.0/16 and 10.43.0.0/16 in `trusted`. Pod-to-pod and DNS must be verified once RKE2 is up (RKE2 role item).
   - NetworkManager: drop `/etc/NetworkManager/conf.d/rke2-canal.conf` marking `flannel*`, `cali*`, `tunl*`, `vxlan.calico`, `vxlan-v6.calico`, `wireguard.cali`, `wg-v6.cali` unmanaged (RKE2 known issue).
-  - `PermitRootLogin` is `without-password` from the image; set to `no` here or in the Week 2 hardening role.
+  - `PermitRootLogin` is `without-password` from the image; left as-is so the Week 2 baseline scan captures it, then fixed in the hardening role.
 - [ ] Ansible: RKE2 role (rke2-selinux, `profile: cis`, `etcd` system user, CIS sysctl file, kubeconfig fetched to repo root)
+  - Verify pod-to-pod traffic, service access, and CoreDNS resolution with firewalld on.
 - [ ] kube-bench baseline saved to `docs/scans/week1-kube-bench.txt`
 - [ ] Makefile: `up`, `down`, `verify`; full rebuild timed and recorded in README
   - Change `terraform init -upgrade` in `up` to plain `terraform init` so rebuilds use the provider versions locked in `.terraform.lock.hcl`.
@@ -204,7 +206,7 @@ Week 8 in ROADMAP.md. Write the README with a Mermaid architecture diagram and a
 
 Decide these before the week that depends on them.
 
-- **Firewall vs. Canal (Week 1).** Options: (a) keep firewalld on with RKE2 ports open and the CNI interfaces and pod/service CIDRs in the `trusted` zone, verified with pod-to-pod and DNS tests; or (b) disable firewalld per RKE2 docs and record a STIG exception with an ADR. (a) keeps the STIG control and is the more useful result if it holds up under testing.
+- **Firewall vs. Canal (Week 1). Decided 10/13: (a).** Options: (a) keep firewalld on with RKE2 ports open and the CNI interfaces and pod/service CIDRs in the `trusted` zone, verified with pod-to-pod and DNS tests; or (b) disable firewalld per RKE2 docs and record a STIG exception with an ADR. (a) keeps the STIG control and is the more useful result if it holds up under testing.
 - **iMac OS (Week 6).** Fedora has no STIG profile in scap-security-guide (CIS, OSPP, PCI-DSS and others only), and rke2-selinux packages target EL. Running Rocky 9 on the iMac too would let the same hardening role and STIG scan apply to both clusters.
 - **iMac memory (Week 6-7).** 8 GB is tight for RKE2 plus Argo CD, Kyverno, a registry, Prometheus and Loki. Expect to trim (for example, no Argo CD on the target, since Zarf deploys) or set small resource limits.
 - **Zarf and Kyverno image verification (Week 6).** Zarf rewrites image references to its own in-cluster registry. Test early that the `verifyImages` policy still admits signed images after the rewrite.

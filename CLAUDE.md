@@ -60,6 +60,9 @@ Done when `make up` builds a Ready single-node cluster from scratch.
 
 Done (10/13): host bootstrap (`make host`: default pool + pinned Rocky 9.8
 image) and Terraform for one VM (`build-node-01`, 192.168.122.61).
-Next: install ansible-core/ansible-lint on the build host, decide the
-firewalld question in ROADMAP.md "Open questions", then the inventory and
-base role. See ROADMAP.md for the checklist.
+Done (10/13): Ansible inventory (`make inventory`) and base role (updates,
+chrony, firewalld kept on with RKE2 ports and pod/service CIDRs trusted,
+NetworkManager CNI exclusions, SELinux enforcing); idempotent.
+Next: RKE2 role (CIS profile), then verify pod networking with firewalld on.
+See ROADMAP.md for the checklist.
+Note: in Claude Code sessions run ansible with `</dev/null` (non-blocking IO error otherwise).

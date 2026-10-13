@@ -1,0 +1,3 @@
+---
+# Default cloud-init user on the Rocky GenericCloud image (terraform var.ssh_user).
+ansible_user: rocky

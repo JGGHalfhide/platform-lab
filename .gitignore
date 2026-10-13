@@ -11,3 +11,5 @@ kubeconfig*
 __pycache__/
 tfplan
 *.tfplan
+ansible/inventory.ini
+ansible/.known_hosts

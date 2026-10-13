@@ -1,0 +1,71 @@
+---
+- name: Update all packages
+  ansible.builtin.dnf:
+    name: "*"
+    state: latest
+    update_only: true
+  when: base_update_packages
+
+- name: Install base packages
+  ansible.builtin.dnf:
+    name: "{{ base_packages }}"
+    state: present
+
+- name: Check whether a reboot is required
+  ansible.builtin.command: dnf needs-restarting --reboothint
+  register: base_needs_restarting
+  changed_when: false
+  failed_when: base_needs_restarting.rc not in [0, 1]
+  check_mode: false
+
+- name: Reboot to apply updates
+  ansible.builtin.reboot:
+    reboot_timeout: 600
+  when: base_needs_restarting.rc == 1
+
+- name: Keep SELinux enforcing
+  ansible.posix.selinux:
+    policy: targeted
+    state: enforcing
+
+- name: Enable chronyd
+  ansible.builtin.systemd_service:
+    name: chronyd
+    enabled: true
+    state: started
+
+- name: Keep NetworkManager off CNI interfaces
+  ansible.builtin.copy:
+    dest: /etc/NetworkManager/conf.d/rke2-canal.conf
+    content: |
+      # Managed by Ansible (base role)
+      [keyfile]
+      unmanaged-devices={{ base_nm_unmanaged_interfaces | map('regex_replace', '^', 'interface-name:') | join(';') }}
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload NetworkManager
+
+- name: Enable firewalld
+  ansible.builtin.systemd_service:
+    name: firewalld
+    enabled: true
+    state: started
+
+- name: Open RKE2 ports
+  ansible.posix.firewalld:
+    zone: "{{ base_firewall_zone }}"
+    port: "{{ item }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  loop: "{{ base_firewall_ports }}"
+
+- name: Trust pod and service networks
+  ansible.posix.firewalld:
+    zone: trusted
+    source: "{{ item }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  loop: "{{ base_firewall_trusted_sources }}"

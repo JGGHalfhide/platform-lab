@@ -1,0 +1,37 @@
+---
+# Apply all pending package updates, rebooting if the kernel or core libraries changed.
+base_update_packages: true
+
+base_packages:
+  - chrony
+  - firewalld
+  - policycoreutils-python-utils
+
+# Ports opened in the default zone for RKE2 server nodes.
+base_firewall_zone: public
+base_firewall_ports:
+  - 6443/tcp         # Kubernetes API
+  - 9345/tcp         # RKE2 supervisor (node registration)
+  - 10250/tcp        # kubelet
+  - 2379-2380/tcp    # etcd client and peer
+  - 8472/udp         # Canal (flannel) VXLAN
+  - 30000-32767/tcp  # NodePort services
+  - 80/tcp           # Ingress HTTP
+  - 443/tcp          # Ingress HTTPS
+
+# Pod and service CIDRs (RKE2 defaults) are trusted so firewalld does not drop
+# CNI traffic. RKE2 recommends disabling firewalld with Canal; we keep it on for
+# the STIG and verify pod networking after RKE2 is installed.
+base_firewall_trusted_sources:
+  - 10.42.0.0/16  # cluster-cidr
+  - 10.43.0.0/16  # service-cidr
+
+# Interfaces NetworkManager must leave alone (RKE2 known issue with Canal).
+base_nm_unmanaged_interfaces:
+  - flannel*
+  - cali*
+  - tunl*
+  - vxlan.calico
+  - vxlan-v6.calico
+  - wireguard.cali
+  - wg-v6.cali
