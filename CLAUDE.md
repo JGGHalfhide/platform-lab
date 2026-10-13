@@ -42,6 +42,7 @@ internet to a second cluster. 8-week build, about 7-10 hours per week.
 - Terraform: variables typed with descriptions; outputs for VM IPs.
 - Run terraform fmt, terraform validate, and ansible-lint before committing.
 - Commit messages use conventional commits (feat:, fix:, docs:, chore:).
+- No AI attribution in commits or PRs (no Co-Authored-By or "Generated with" lines).
 - Tag the repo at the end of each week (v0.1, v0.2, ...).
 - ADRs live in docs/adr/NNNN-title.md and state the decision and its context only.
 - Secrets, kubeconfigs, and state files are never committed.
