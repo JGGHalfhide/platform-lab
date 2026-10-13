@@ -45,7 +45,7 @@ Goal: `make up` builds a Ready, CIS-profile RKE2 cluster from nothing.
 - [x] Ansible: RKE2 role (rke2-selinux, `profile: cis`, `etcd` system user, CIS sysctl file, kubeconfig fetched to repo root)
   - RKE2 v1.36.5+rke2r1 (stable) from the signed rpm.rancher.io repos, version pinned; signing key pinned by fingerprint. `rke2` runs as `container_runtime_t`; etcd runs as `etcd`, data dir `etcd:etcd 0700`. Idempotent (`changed=0`).
   - Firewalld option (a) verified 10/13: pod-to-pod, Service by name, cluster and external DNS, pod egress, pod-to-API, node-to-pod, NodePort from the build host all pass; listening but unopened ports (8081, 9091, 111) are rejected from outside.
-  - `kubectl` is not installed on the build host yet; `make verify` needs it.
+  - `kubectl` 1.37.1 installed on the build host (pacman); `make verify` shows the node Ready over TLS via `tls-san`.
 - [ ] kube-bench baseline saved to `docs/scans/week1-kube-bench.txt`
 - [ ] Makefile: `up`, `down`, `verify`; full rebuild timed and recorded in README
   - Change `terraform init -upgrade` in `up` to plain `terraform init` so rebuilds use the provider versions locked in `.terraform.lock.hcl`.
