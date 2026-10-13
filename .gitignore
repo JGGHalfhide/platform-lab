@@ -1,0 +1,11 @@
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl.bak
+*.pem
+*.key
+id_*
+kubeconfig*
+.env
+*.retry
+__pycache__/
