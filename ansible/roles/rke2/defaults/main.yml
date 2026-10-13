@@ -1,0 +1,26 @@
+---
+# RKE2 release from the stable channel, as packaged in rpm.rancher.io.
+rke2_minor: "1.36"
+rke2_version: "1.36.5~rke2r1"
+
+rke2_repo_base: https://rpm.rancher.io/rke2/latest
+rke2_gpg_key_url: https://rpm.rancher.io/public.key
+# Rancher (CI) <ci@rancher.com> signing key.
+rke2_gpg_key_fingerprint: C8CF F216 4551 26E9 B9C9 18BE 925E A29A E257 814A
+
+# Must match the trusted firewalld sources in the base role.
+rke2_cluster_cidr: 10.42.0.0/16
+rke2_service_cidr: 10.43.0.0/16
+
+# Written to /etc/rancher/rke2/config.yaml.
+rke2_config:
+  profile: cis
+  selinux: true
+  write-kubeconfig-mode: "0600"
+  cluster-cidr: "{{ rke2_cluster_cidr }}"
+  service-cidr: "{{ rke2_service_cidr }}"
+  tls-san:
+    - "{{ ansible_host | default(inventory_hostname) }}"
+
+# Admin kubeconfig copied to the controller (repo root; gitignored).
+rke2_kubeconfig_dest: "{{ playbook_dir }}/../kubeconfig"

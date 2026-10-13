@@ -1,0 +1,111 @@
+---
+# The CIS profile requires etcd to run as a host-level etcd user and group.
+- name: Create etcd group
+  ansible.builtin.group:
+    name: etcd
+    system: true
+
+- name: Create etcd user
+  ansible.builtin.user:
+    name: etcd
+    group: etcd
+    system: true
+    shell: /sbin/nologin
+    create_home: false
+    comment: etcd user
+
+- name: Import the RKE2 RPM signing key
+  ansible.builtin.rpm_key:
+    key: "{{ rke2_gpg_key_url }}"
+    fingerprint: "{{ rke2_gpg_key_fingerprint }}"
+
+- name: Add the RKE2 common repository (rke2-selinux)
+  ansible.builtin.yum_repository:
+    name: rancher-rke2-common-latest
+    description: Rancher RKE2 Common Latest
+    baseurl: "{{ rke2_repo_base }}/common/centos/{{ ansible_facts['distribution_major_version'] }}/noarch"
+    gpgcheck: true
+    repo_gpgcheck: true
+    gpgkey: "{{ rke2_gpg_key_url }}"
+
+- name: Add the versioned RKE2 repository
+  ansible.builtin.yum_repository:
+    name: rancher-rke2-{{ rke2_minor | replace('.', '-') }}-latest
+    description: Rancher RKE2 {{ rke2_minor }} Latest
+    baseurl: "{{ rke2_repo_base }}/{{ rke2_minor }}/centos/{{ ansible_facts['distribution_major_version'] }}/x86_64"
+    gpgcheck: true
+    repo_gpgcheck: true
+    gpgkey: "{{ rke2_gpg_key_url }}"
+
+# Pulls in rke2-common and rke2-selinux. The RPM also sets RKE2_SELINUX=true.
+- name: Install rke2-server
+  ansible.builtin.dnf:
+    name: "rke2-server-{{ rke2_version }}"
+    state: present
+
+# Applied via handler only when the file changes; restarting systemd-sysctl on a
+# running cluster can undo CNI settings.
+- name: Install the CIS sysctl file
+  ansible.builtin.copy:
+    src: /usr/share/rke2/rke2-cis-sysctl.conf
+    dest: /etc/sysctl.d/60-rke2-cis.conf
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Apply the CIS sysctls
+
+- name: Create the RKE2 config directory
+  ansible.builtin.file:
+    path: /etc/rancher/rke2
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Write the RKE2 config
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: /etc/rancher/rke2/config.yaml
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Restart rke2-server
+
+# Sysctls must be applied before RKE2 first starts, and config changes picked up
+# before waiting on the node.
+- name: Run pending handlers
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start rke2-server
+  ansible.builtin.systemd_service:
+    name: rke2-server
+    enabled: true
+    state: started
+
+# Retried because the node object does not exist for the first few seconds,
+# and `kubectl wait` fails immediately on a missing resource.
+- name: Wait for the node to be Ready
+  ansible.builtin.command: >-
+    /var/lib/rancher/rke2/bin/kubectl --kubeconfig /etc/rancher/rke2/rke2.yaml
+    wait --for=condition=Ready node/{{ ansible_facts['hostname'] }} --timeout=60s
+  register: rke2_node_ready
+  until: rke2_node_ready is succeeded
+  retries: 10
+  delay: 5
+  changed_when: false
+
+- name: Read the admin kubeconfig
+  ansible.builtin.slurp:
+    src: /etc/rancher/rke2/rke2.yaml
+  register: rke2_kubeconfig
+
+- name: Save the kubeconfig on the controller
+  ansible.builtin.copy:
+    content: >-
+      {{ rke2_kubeconfig.content | b64decode
+         | replace('https://127.0.0.1:6443', 'https://' ~ (ansible_host | default(inventory_hostname)) ~ ':6443') }}
+    dest: "{{ rke2_kubeconfig_dest }}"
+    mode: "0600"
+  delegate_to: localhost
+  become: false

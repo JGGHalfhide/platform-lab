@@ -63,6 +63,9 @@ image) and Terraform for one VM (`build-node-01`, 192.168.122.61).
 Done (10/13): Ansible inventory (`make inventory`) and base role (updates,
 chrony, firewalld kept on with RKE2 ports and pod/service CIDRs trusted,
 NetworkManager CNI exclusions, SELinux enforcing); idempotent.
-Next: RKE2 role (CIS profile), then verify pod networking with firewalld on.
-See ROADMAP.md for the checklist.
+Done (10/13): RKE2 role (v1.36.5+rke2r1, CIS profile, SELinux, etcd user,
+CIS sysctls, kubeconfig at ./kubeconfig); node Ready; pod networking verified
+with firewalld on.
+Next: kube-bench baseline (docs/scans/week1-kube-bench.txt), then the timed
+`make down && make up` rebuild and tag v0.1. See ROADMAP.md for the checklist.
 Note: in Claude Code sessions run ansible with `</dev/null` (non-blocking IO error otherwise).

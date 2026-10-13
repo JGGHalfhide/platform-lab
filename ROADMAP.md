@@ -42,8 +42,10 @@ Goal: `make up` builds a Ready, CIS-profile RKE2 cluster from nothing.
   - Firewall: decided option (a), firewalld on. RKE2 ports open in `public`; 10.42.0.0/16 and 10.43.0.0/16 in `trusted`. Pod-to-pod and DNS must be verified once RKE2 is up (RKE2 role item).
   - NetworkManager: drop `/etc/NetworkManager/conf.d/rke2-canal.conf` marking `flannel*`, `cali*`, `tunl*`, `vxlan.calico`, `vxlan-v6.calico`, `wireguard.cali`, `wg-v6.cali` unmanaged (RKE2 known issue).
   - `PermitRootLogin` is `without-password` from the image; left as-is so the Week 2 baseline scan captures it, then fixed in the hardening role.
-- [ ] Ansible: RKE2 role (rke2-selinux, `profile: cis`, `etcd` system user, CIS sysctl file, kubeconfig fetched to repo root)
-  - Verify pod-to-pod traffic, service access, and CoreDNS resolution with firewalld on.
+- [x] Ansible: RKE2 role (rke2-selinux, `profile: cis`, `etcd` system user, CIS sysctl file, kubeconfig fetched to repo root)
+  - RKE2 v1.36.5+rke2r1 (stable) from the signed rpm.rancher.io repos, version pinned; signing key pinned by fingerprint. `rke2` runs as `container_runtime_t`; etcd runs as `etcd`, data dir `etcd:etcd 0700`. Idempotent (`changed=0`).
+  - Firewalld option (a) verified 10/13: pod-to-pod, Service by name, cluster and external DNS, pod egress, pod-to-API, node-to-pod, NodePort from the build host all pass; listening but unopened ports (8081, 9091, 111) are rejected from outside.
+  - `kubectl` is not installed on the build host yet; `make verify` needs it.
 - [ ] kube-bench baseline saved to `docs/scans/week1-kube-bench.txt`
 - [ ] Makefile: `up`, `down`, `verify`; full rebuild timed and recorded in README
   - Change `terraform init -upgrade` in `up` to plain `terraform init` so rebuilds use the provider versions locked in `.terraform.lock.hcl`.
@@ -62,6 +64,7 @@ Continue Week 1 in ROADMAP.md. Write the Ansible base role and the RKE2 role (CI
 Goal: measurable before/after STIG results on the node OS.
 
 - [ ] Install `openscap-scanner` and `scap-security-guide` on the VM via Ansible
+- [ ] Note for the hardening role: `rpcbind` is listening on 111 (blocked by firewalld, but the STIG wants it removed or disabled)
 - [ ] Baseline OpenSCAP scan against the STIG profile for the installed datastream (list `/usr/share/xml/scap/ssg/content/` to find it); HTML and XML reports to `docs/scans/week2-baseline.*`
 - [ ] Ansible hardening role covering the failed rules (generate remediation with `oscap xccdf generate fix` as a starting point, then convert to idempotent tasks)
 - [ ] Re-scan; reports to `docs/scans/week2-hardened.*`
@@ -85,7 +88,7 @@ Goal: cluster state is driven from `gitops/`.
 - [ ] App-of-apps root application pointing at `gitops/apps/`
 - [ ] Argo CD manages itself from Git
 - [ ] In-cluster registry (Zot by default; Harbor optional) deployed via Argo CD, with persistent storage (local-path-provisioner)
-- [ ] Ingress using the controller bundled with the installed RKE2 version (check `kubectl get pods -n kube-system`)
+- [ ] Ingress using the controller bundled with the installed RKE2 version (v1.36 ships Traefik, `rke2-traefik` in `kube-system`)
 - [ ] Push a test image to the registry and pull it from a pod
 - [ ] Tag `v0.3`
 

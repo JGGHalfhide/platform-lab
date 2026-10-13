@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  author: platform-lab
+  description: Single-node RKE2 server with the CIS profile on Rocky Linux 9
+  license: MIT
+  min_ansible_version: "2.16"
+  platforms:
+    - name: EL
+      versions:
+        - "9"
+dependencies: []

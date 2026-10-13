@@ -1,6 +1,7 @@
 ---
-- name: Base OS configuration
+- name: Base OS configuration and RKE2
   hosts: rke2_servers
   become: true
   roles:
     - base
+    - rke2
