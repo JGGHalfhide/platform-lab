@@ -71,14 +71,19 @@ Goal: measurable before/after STIG results on the node OS.
 
 - [x] Install `openscap-scanner` and `scap-security-guide` on the VM via Ansible
   - `openscap` role in `site.yml` (openscap-scanner 1.3.14, scap-security-guide 0.1.82). Datastream `ssg-rl9-ds.xml`, profile `xccdf_org.ssgproject.content_profile_stig` (Rocky's port of the RHEL 9 DISA STIG; DISA publishes no STIG for Rocky itself).
-- [ ] Note for the hardening role: `rpcbind` is listening on 111 (blocked by firewalld, but the STIG wants it removed or disabled)
+- [x] Note for the hardening role: `rpcbind` is listening on 111 (blocked by firewalld, but the STIG wants it removed or disabled)
+  - Removed with `nfs-utils` (its only dependent) in the hardening role.
 - [x] Baseline OpenSCAP scan against the STIG profile for the installed datastream (list `/usr/share/xml/scap/ssg/content/` to find it); HTML and XML reports to `docs/scans/week2-baseline.*`
   - `make stig-scan NAME=<name>` runs `ansible/stig-scan.yml` (about 30s) and fetches the HTML report and XCCDF results. Only `.gz` copies are committed; raw files are ~27 MB per scan and gitignored.
   - Baseline 11/14: 164 pass, 261 fail (38.6% of 425 scored rules); 10 notchecked, 42 notapplicable. Fails by severity: 11 high, 227 medium, 20 low, 3 unknown.
-- [ ] Ansible hardening role covering the failed rules (generate remediation with `oscap xccdf generate fix` as a starting point, then convert to idempotent tasks)
-- [ ] Re-scan; reports to `docs/scans/week2-hardened.*`
-- [ ] `docs/hardening.md`: table of rule IDs, status, and any documented exceptions
-- [ ] Confirm RKE2 still starts and passes kube-bench after hardening
+- [x] Ansible hardening role covering the failed rules (generate remediation with `oscap xccdf generate fix` as a starting point, then convert to idempotent tasks)
+  - `hardening` role, one task file per area; exceptions in `hardening_exceptions` (28, each with a reason). Secrets in Ansible Vault. FIPS mode on (lab key is now ECDSA P-384: FIPS rejects ed25519). Idempotent (`changed=0`).
+- [x] Re-scan; reports to `docs/scans/week2-hardened.*`
+  - 11/14: 399 pass, 28 fail (93.4%), up from 164/261 (38.6%). High-severity fails 11 -> 1. Every remaining fail is a documented exception.
+- [x] `docs/hardening.md`: table of rule IDs, status, and any documented exceptions
+- [x] Confirm RKE2 still starts and passes kube-bench after hardening
+  - kube-bench 81 pass / 0 fail (`docs/scans/week2-kube-bench.txt`); pod-to-pod, Service, DNS, egress and NodePort tests pass.
+- [ ] Full `make down && make up` rebuild with hardening (acceptance; the Terraform key change replaces the VM anyway)
 - [ ] Tag `v0.2`; publish Post 1 (hardening results)
 
 Acceptance: second scan shows a measurable pass-rate increase; `make up` still works end to end.

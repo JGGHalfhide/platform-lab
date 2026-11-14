@@ -1,0 +1,49 @@
+---
+# aide_use_fips_hashes, aide_verify_acls, aide_verify_ext_attributes,
+# aide_check_audit_tools, aide_build_database, aide_scan_notification.
+- name: Remove non-FIPS hashes from AIDE rule groups
+  ansible.builtin.replace:
+    path: /etc/aide.conf
+    regexp: '^([A-Z][A-Za-z0-9_]*\s*=.*?)\+?\b{{ item }}\b'
+    replace: '\1'
+  loop: [md5, sha1, rmd160, sha256, tiger, haval, gost, crc32, whirlpool]
+
+- name: Add sha512, ACLs and extended attributes to AIDE rule groups
+  ansible.builtin.replace:
+    path: /etc/aide.conf
+    regexp: '^([A-Z][A-Za-z0-9_]*\s*=\s*(?!.*\b{{ item }}\b)\S.*?)\s*$'
+    replace: '\1+{{ item }}'
+  loop: [sha512, acl, xattrs]
+
+- name: Protect the audit tools with AIDE
+  ansible.builtin.lineinfile:
+    path: /etc/aide.conf
+    regexp: '^(/usr)?/sbin/{{ item }}\s'
+    line: /usr/sbin/{{ item }} p+i+n+u+g+s+b+acl+xattrs+sha512
+  loop:
+    - auditctl
+    - auditd
+    - ausearch
+    - aureport
+    - autrace
+    - augenrules
+    - rsyslogd
+
+# Built once; takes a few minutes.
+- name: Build the AIDE database
+  ansible.builtin.shell: |
+    set -o pipefail
+    aide --init
+    mv /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
+  args:
+    creates: /var/lib/aide/aide.db.gz
+
+- name: Run a daily AIDE check and mail the result to root
+  ansible.builtin.copy:
+    dest: /etc/cron.d/aide
+    content: |
+      # Managed by Ansible (hardening role).
+      0 5 * * * root /usr/sbin/aide --check | /bin/mail -s "$(hostname) - AIDE Integrity Check" root@localhost
+    owner: root
+    group: root
+    mode: "0644"

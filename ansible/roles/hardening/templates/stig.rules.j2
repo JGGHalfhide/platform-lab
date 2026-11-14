@@ -1,0 +1,48 @@
+## Managed by Ansible (hardening role). RHEL 9 STIG audit rules.
+
+{% for arch in ['b32', 'b64'] %}
+## Permission and ownership changes
+-a always,exit -F arch={{ arch }} -S chmod,fchmod,fchmodat -F auid>=1000 -F auid!=unset -F key=perm_mod
+-a always,exit -F arch={{ arch }} -S chown,fchown,fchownat,lchown -F auid>=1000 -F auid!=unset -F key=perm_mod
+-a always,exit -F arch={{ arch }} -S setxattr,lsetxattr,fsetxattr,removexattr,lremovexattr,fremovexattr -F auid>=1000 -F auid!=unset -F key=perm_mod
+-a always,exit -F arch={{ arch }} -S setxattr,lsetxattr,fsetxattr,removexattr,lremovexattr,fremovexattr -F auid=0 -F key=perm_mod
+-a always,exit -F arch={{ arch }} -S umount2 -F auid>=1000 -F auid!=unset -F key=perm_mod
+{% if arch == 'b32' %}
+-a always,exit -F arch=b32 -S umount -F auid>=1000 -F auid!=unset -F key=perm_mod
+{% endif %}
+
+## File deletion
+-a always,exit -F arch={{ arch }} -S rename,renameat,rmdir,unlink,unlinkat -F auid>=1000 -F auid!=unset -F key=delete
+
+## Unsuccessful file access
+-a always,exit -F arch={{ arch }} -S creat,ftruncate,open,openat,open_by_handle_at,truncate -F exit=-EACCES -F auid>=1000 -F auid!=unset -F key=perm_access
+-a always,exit -F arch={{ arch }} -S creat,ftruncate,open,openat,open_by_handle_at,truncate -F exit=-EPERM -F auid>=1000 -F auid!=unset -F key=perm_access
+
+## Kernel modules
+-a always,exit -F arch={{ arch }} -S init_module,finit_module -F auid>=1000 -F auid!=unset -F key=module_chng
+-a always,exit -F arch={{ arch }} -S delete_module -F auid>=1000 -F auid!=unset -F key=module_chng
+
+## Privilege escalation through setuid/setgid programs
+-a always,exit -F arch={{ arch }} -S execve -C uid!=euid -F euid=0 -F key=setuid
+-a always,exit -F arch={{ arch }} -S execve -C gid!=egid -F egid=0 -F key=setgid
+
+## Commands run by cron as root or a privileged user
+-a always,exit -F arch={{ arch }} -S execve -F subj_type=crond_t -F euid=0 -F key=cron_exec
+-a always,exit -F arch={{ arch }} -S execve -F subj_type=crond_t -F auid>=1000 -F auid!=unset -F key=cron_exec
+
+## Login records
+-a always,exit -F arch={{ arch }} -F path=/var/log/faillock -F perm=wa -F auid>=1000 -F auid!=unset -F key=logins
+-a always,exit -F arch={{ arch }} -F path=/var/log/lastlog -F perm=wa -F auid>=1000 -F auid!=unset -F key=logins
+
+## Account and sudo configuration
+{% for path in ['/etc/group', '/etc/gshadow', '/etc/passwd', '/etc/security/opasswd', '/etc/shadow', '/etc/sudoers'] %}
+-a always,exit -F arch={{ arch }} -F path={{ path }} -F perm=wa -F key=identity
+{% endfor %}
+-a always,exit -F arch={{ arch }} -F dir=/etc/sudoers.d/ -F perm=wa -F key=identity
+
+{% endfor %}
+## Privileged commands
+{% for cmd in hardening_audited_commands %}
+-a always,exit -F path={{ cmd }} -F perm=x -F auid>=1000 -F auid!=unset -F key=privileged
+{% endfor %}
+

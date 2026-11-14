@@ -1,0 +1,25 @@
+---
+# sysctl_*, kernel_module_*_disabled.
+# Each key is set live and written to its own file, so systemd-sysctl is never
+# reloaded wholesale (that can undo CNI settings on a running node).
+- name: Set kernel parameters
+  ansible.posix.sysctl:
+    name: "{{ item.value[0] }}"
+    value: "{{ item.value[1] }}"
+    sysctl_file: /etc/sysctl.d/99-stig.conf
+    sysctl_set: true
+    reload: false
+  loop: "{{ hardening_sysctls | dict2items | rejectattr('key', 'in', hardening_exceptions) }}"
+  loop_control:
+    label: "{{ item.value[0] }}"
+
+- name: Disable unused kernel modules
+  ansible.builtin.copy:
+    dest: /etc/modprobe.d/{{ item }}.conf
+    content: |
+      install {{ item }} /bin/false
+      blacklist {{ item }}
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ hardening_disabled_kernel_modules }}"

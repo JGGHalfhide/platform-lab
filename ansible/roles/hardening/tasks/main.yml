@@ -6,3 +6,46 @@
 - name: FIPS mode and crypto policy
   ansible.builtin.import_tasks: fips.yml
   tags: [hardening, fips]
+
+- name: Packages and services
+  ansible.builtin.import_tasks: packages.yml
+  tags: [hardening, packages]
+
+- name: SSH server
+  ansible.builtin.import_tasks: ssh.yml
+  tags: [hardening, ssh]
+
+- name: Authentication, passwords and sessions
+  ansible.builtin.import_tasks: auth.yml
+  tags: [hardening, auth]
+
+- name: Kernel parameters and modules
+  ansible.builtin.import_tasks: kernel.yml
+  tags: [hardening, kernel]
+
+- name: Boot loader, boot options and mounts
+  ansible.builtin.import_tasks: boot.yml
+  tags: [hardening, boot]
+
+- name: Audit
+  ansible.builtin.import_tasks: audit.yml
+  tags: [hardening, audit]
+
+- name: Logging and time
+  ansible.builtin.import_tasks: logging.yml
+  tags: [hardening, logging]
+
+# Last, so the database reflects the hardened system.
+- name: AIDE file integrity
+  ansible.builtin.import_tasks: aide.yml
+  tags: [hardening, aide]
+
+- name: Apply pending handlers
+  ansible.builtin.meta: flush_handlers
+  tags: [hardening]
+
+- name: Reboot to apply kernel arguments and immutable audit rules
+  ansible.builtin.reboot:
+    reboot_timeout: 900
+  when: hardening_reboot_required | default(false)
+  tags: [hardening]

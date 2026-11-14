@@ -1,0 +1,187 @@
+---
+# enable_authselect, account_password_pam_faillock_*, accounts_passwords_pam_faillock_*,
+# accounts_password_pam_*, accounts_password_pam_unix_rounds_*, no_empty_passwords,
+# accounts_{maximum,minimum}_age_login_defs, accounts_logon_fail_delay,
+# account_disable_post_pw_expiration, accounts_umask_*, accounts_tmout,
+# accounts_max_concurrent_login_sessions, use_pam_wheel_for_su,
+# rootfiles_configured, file_permission_user_init_files_root.
+
+# PAM is managed through a custom authselect profile (copy of `sssd`, the
+# STIG profile's choice) so the rounds= change survives authselect updates.
+- name: Create the custom authselect profile
+  ansible.builtin.command: authselect create-profile stig --base-on=sssd
+  args:
+    creates: /etc/authselect/custom/stig/system-auth
+
+- name: Hash passwords with 100000 rounds
+  ansible.builtin.replace:
+    path: /etc/authselect/custom/stig/{{ item }}
+    regexp: '^(password\s+sufficient\s+pam_unix\.so(?!.*rounds=).*?)\s*$'
+    replace: '\1 rounds=100000'
+  loop:
+    - system-auth
+    - password-auth
+  register: hardening_authselect_rounds
+
+- name: Read the selected authselect profile
+  ansible.builtin.command: authselect current --raw
+  register: hardening_authselect_current
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Select the custom profile with faillock and without nullok
+  ansible.builtin.command: authselect select custom/stig with-faillock without-nullok --force
+  when: hardening_authselect_current.stdout != 'custom/stig with-faillock without-nullok'
+  register: hardening_authselect_select
+  changed_when: true
+
+- name: Apply profile changes
+  ansible.builtin.command: authselect apply-changes
+  when:
+    - hardening_authselect_rounds is changed
+    - hardening_authselect_select is not changed
+  changed_when: true
+
+- name: Label the faillock directory
+  community.general.sefcontext:
+    target: /var/log/faillock(/.*)?
+    setype: faillog_t
+    state: present
+
+- name: Create the faillock directory
+  ansible.builtin.file:
+    path: /var/log/faillock
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+    setype: faillog_t
+
+# unlock_time=0: locked accounts stay locked until an admin runs faillock --reset.
+- name: Configure faillock
+  ansible.builtin.lineinfile:
+    path: /etc/security/faillock.conf
+    regexp: '^#?\s*{{ item.split("=")[0] | trim }}(\s|=|$)'
+    line: "{{ item }}"
+  loop:
+    - audit
+    - deny = 3
+    - dir = /var/log/faillock
+    - even_deny_root
+    - fail_interval = 900
+    - unlock_time = 0
+
+- name: Configure password quality
+  ansible.builtin.lineinfile:
+    path: /etc/security/pwquality.conf
+    regexp: '^#?\s*{{ item.split("=")[0] | trim }}(\s|=|$)'
+    line: "{{ item }}"
+  loop:
+    - dcredit = -1
+    - dictcheck = 1
+    - difok = 8
+    - enforce_for_root
+    - lcredit = -1
+    - maxclassrepeat = 4
+    - maxrepeat = 3
+    - minclass = 4
+    - minlen = 15
+    - ocredit = -1
+    - retry = 3
+    - ucredit = -1
+
+- name: Set password aging, umask and login delay defaults
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs
+    regexp: '^#?\s*{{ item.split()[0] }}\s'
+    line: "{{ item }}"
+  loop:
+    - FAIL_DELAY 4
+    - PASS_MAX_DAYS 60
+    - PASS_MIN_DAYS 1
+    - UMASK 077
+
+- name: Disable accounts 35 days after password expiry
+  ansible.builtin.lineinfile:
+    path: /etc/default/useradd
+    regexp: '^INACTIVE='
+    line: INACTIVE=35
+
+- name: Set the shell umask
+  ansible.builtin.lineinfile:
+    path: "{{ item }}"
+    regexp: '^\s*umask\s+'
+    line: umask 077
+  loop:
+    - /etc/bashrc
+    - /etc/profile
+
+# /etc/bashrc also sets umask inside conditionals; every one must be 077.
+- name: Set every umask in /etc/bashrc to 077
+  ansible.builtin.replace:
+    path: /etc/bashrc
+    regexp: '^([^#\n]*\bumask)\s+(?!077\b)\d+'
+    replace: '\1 077'
+
+- name: Time out idle shells after 10 minutes
+  ansible.builtin.copy:
+    dest: /etc/profile.d/tmout.sh
+    content: |
+      # Managed by Ansible (hardening role).
+      typeset -xr TMOUT=600
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Limit concurrent logins
+  ansible.builtin.copy:
+    dest: /etc/security/limits.d/90-stig-maxlogins.conf
+    content: |
+      *          hard    maxlogins     10
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Restrict su to the wheel group
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/su
+    regexp: '^#?\s*auth\s+required\s+pam_wheel\.so\s+use_uid'
+    line: "auth\t\trequired\tpam_wheel.so use_uid"
+
+# systemd-tmpfiles recreates missing root dotfiles from this file.
+- name: Create root dotfiles with mode 0600
+  ansible.builtin.copy:
+    dest: /etc/tmpfiles.d/rootfiles.conf
+    content: |
+      C /root/.bash_logout 600 root root - /usr/share/rootfiles/.bash_logout
+      C /root/.bash_profile 600 root root - /usr/share/rootfiles/.bash_profile
+      C /root/.bashrc 600 root root - /usr/share/rootfiles/.bashrc
+      C /root/.cshrc 600 root root - /usr/share/rootfiles/.cshrc
+      C /root/.tcshrc 600 root root - /usr/share/rootfiles/.tcshrc
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Remove group write and other access from interactive users' dotfiles
+  ansible.builtin.shell: |
+    set -o pipefail
+    awk -F: '($3 == 0 || $3 >= 1000) && $7 != "/sbin/nologin" && $1 != "nobody" {print $6}' /etc/passwd |
+      while read -r home; do
+        [ -d "$home" ] || continue
+        find "$home" -maxdepth 1 -name '.*' ! -name '.' ! -name '..' \
+          \( -perm /u=s -o -perm /g=wxs -o -perm /o=rwx \) -print -exec chmod u-s,g-wxs,o= {} +
+      done
+  register: hardening_dotfiles
+  changed_when: hardening_dotfiles.stdout | length > 0
+
+- name: Restrict root dotfiles
+  ansible.builtin.file:
+    path: /root/{{ item }}
+    mode: "0600"
+  loop:
+    - .bash_logout
+    - .bash_profile
+    - .bashrc
+    - .cshrc
+    - .tcshrc

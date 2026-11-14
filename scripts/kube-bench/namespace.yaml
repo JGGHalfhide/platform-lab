@@ -1,0 +1,11 @@
+# Applied first: Kubernetes creates the namespace's default service account
+# itself, so job.yaml must update it rather than race to create it.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-bench
+  labels:
+    # The scanner needs hostPID and host paths; the RKE2 CIS default is restricted.
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: privileged
+    pod-security.kubernetes.io/audit: privileged

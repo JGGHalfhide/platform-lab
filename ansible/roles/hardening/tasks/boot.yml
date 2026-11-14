@@ -1,0 +1,88 @@
+---
+# grub2_*_argument, grub2_init_on_free, grub2_disable_interactive_boot,
+# grub2_password, grub2_admin_username, mount_option_boot_*, mount_option_dev_shm_*.
+- name: Read kernel arguments of all boot entries
+  ansible.builtin.command: grubby --info=ALL
+  register: hardening_grubby_info
+  changed_when: false
+  check_mode: false
+
+- name: Add kernel arguments to all boot entries
+  ansible.builtin.command: grubby --update-kernel=ALL --args="{{ item }}"
+  loop: "{{ hardening_kernel_args }}"
+  when: >-
+    hardening_grubby_info.stdout_lines | select('match', '^args=')
+    | reject('search', '(\"|\s)' ~ (item | regex_escape) ~ '(\"|\s)') | list | length > 0
+  changed_when: true
+
+- name: Read the running kernel command line
+  ansible.builtin.command: cat /proc/cmdline
+  register: hardening_proc_cmdline
+  changed_when: false
+  check_mode: false
+
+- name: Reboot later if the running kernel lacks an argument
+  ansible.builtin.set_fact:
+    hardening_reboot_required: true
+  when: hardening_kernel_args | difference(hardening_proc_cmdline.stdout.split()) | length > 0
+
+# Kernels installed later take their arguments from /etc/default/grub.
+- name: Add kernel arguments to the GRUB defaults
+  ansible.builtin.lineinfile:
+    path: /etc/default/grub
+    regexp: '^GRUB_CMDLINE_LINUX='
+    line: GRUB_CMDLINE_LINUX="{{ hardening_kernel_args | join(' ') }}"
+  notify: Rebuild grub.cfg
+
+- name: Disable the recovery boot entries
+  ansible.builtin.lineinfile:
+    path: /etc/default/grub
+    regexp: '^GRUB_DISABLE_RECOVERY='
+    line: GRUB_DISABLE_RECOVERY=true
+  notify: Rebuild grub.cfg
+
+- name: Use a non-default GRUB superuser name
+  ansible.builtin.replace:
+    path: /etc/grub.d/01_users
+    regexp: '{{ item.regexp }}'
+    replace: '{{ item.replace }}'
+  loop:
+    - { regexp: 'set superusers="root"', replace: 'set superusers="{{ hardening_grub_superuser }}"' }
+    - { regexp: 'password_pbkdf2 root ', replace: 'password_pbkdf2 {{ hardening_grub_superuser }} ' }
+  notify: Rebuild grub.cfg
+
+- name: Set the GRUB password
+  ansible.builtin.copy:
+    dest: /boot/grub2/user.cfg
+    content: |
+      GRUB2_PASSWORD={{ vault_grub_password_pbkdf2 }}
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Rebuild grub.cfg
+
+- name: Mount /boot with nodev and nosuid
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^(\S+\s+/boot\s+\S+\s+)(?!\S*\b{{ item }}\b)(\S+)'
+    replace: '\1\2,{{ item }}'
+  loop:
+    - nodev
+    - nosuid
+  notify: Remount /boot
+
+- name: Mount /boot/efi with nosuid
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^(\S+\s+/boot/efi\s+\S+\s+)(?!\S*\bnosuid\b)(\S+)'
+    replace: '\1\2,nosuid'
+  notify: Remount /boot/efi
+
+- name: Mount /dev/shm with nodev, nosuid and noexec
+  ansible.posix.mount:
+    path: /dev/shm
+    src: tmpfs
+    fstype: tmpfs
+    opts: defaults,nodev,nosuid,noexec
+    state: mounted

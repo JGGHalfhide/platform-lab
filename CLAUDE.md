@@ -77,11 +77,11 @@ node; RKE2 pinned with dnf versionlock (the package update had moved it to 1.36.
 Week 2 (OS hardening):
 Done (11/14): `openscap` role and `make stig-scan NAME=...`; baseline STIG scan
 164 pass / 261 fail (38.6%), docs/scans/week2-baseline.{html,xml}.gz.
-Done (11/14): hardening role phase 1: Vault (sudo + GRUB passwords), lab key
-~/.ssh/platform-lab_ecdsa (FIPS rejects ed25519), sudo needs a password,
-FIPS mode on with crypto policy FIPS:STIG; RKE2 healthy; idempotent.
-Note: terraform's key default changed, so the next `make up` replaces the VM.
-Next: hardening phase 2 (SSH, auth/PAM, audit, kernel, boot/GRUB, packages,
-AIDE), with exceptions in hardening_exceptions.
+Done (11/14): `hardening` role (Vault secrets, FIPS:STIG, SSH, PAM/authselect,
+audit, kernel, GRUB, AIDE; 28 exceptions in hardening_exceptions). Rescan:
+399 pass / 28 fail (93.4%); kube-bench still 0 fail; docs/hardening.md.
+Lab SSH key is ~/.ssh/platform-lab_ecdsa (FIPS rejects ed25519). The next
+`make up` replaces the VM (Terraform key default changed).
+Next: full `make down && make up` rebuild with hardening (ask first), then tag v0.2.
 See ROADMAP.md for the checklist.
 Note: in Claude Code sessions run ansible with `</dev/null` (non-blocking IO error otherwise).

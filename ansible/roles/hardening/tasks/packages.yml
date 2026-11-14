@@ -1,0 +1,128 @@
+---
+# package_*_installed / package_*_removed, service_*_enabled/disabled,
+# ensure_gpgcheck_local_packages, usbguard_generate_policy,
+# configure_opensc_card_drivers, postfix_client_configure_mail_alias.
+- name: Install packages the STIG requires
+  ansible.builtin.dnf:
+    name:
+      - aide
+      - audispd-plugins
+      - fapolicyd
+      - gnutls-utils
+      - libreswan
+      - nss-tools
+      - opensc
+      - openssl-pkcs11
+      - pcsc-lite
+      - postfix
+      - rsyslog-gnutls
+      - s-nail
+      - usbguard
+    state: present
+
+# rpcbind (port 111) only came in as a dependency of nfs-utils.
+- name: Remove packages the STIG prohibits
+  ansible.builtin.dnf:
+    name:
+      - gssproxy
+      - nfs-utils
+      - rpcbind
+    state: absent
+
+- name: Check signatures on local packages too
+  community.general.ini_file:
+    path: /etc/dnf/dnf.conf
+    section: main
+    option: localpkg_gpgcheck
+    value: "1"
+    no_extra_spaces: true
+    mode: "0644"
+
+- name: Generate the USBGuard policy from the attached devices
+  ansible.builtin.shell: |
+    set -o pipefail
+    if [ -s /etc/usbguard/rules.conf ]; then exit 0; fi
+    usbguard generate-policy > /etc/usbguard/rules.conf
+    chmod 0600 /etc/usbguard/rules.conf
+    echo generated
+  register: hardening_usbguard_policy
+  changed_when: "'generated' in hardening_usbguard_policy.stdout"
+
+- name: Use the CAC smart card driver
+  ansible.builtin.lineinfile:
+    path: /etc/opensc.conf
+    insertafter: '^app default \{'
+    regexp: '^\s*card_drivers\s*='
+    line: "\tcard_drivers = cac;"
+
+- name: Reject mail relaying from outside the local networks
+  ansible.builtin.lineinfile:
+    path: /etc/postfix/main.cf
+    regexp: '^smtpd_client_restrictions\s*='
+    line: smtpd_client_restrictions = permit_mynetworks,reject
+  notify: Restart postfix
+
+- name: Send USBGuard events to the audit log
+  ansible.builtin.lineinfile:
+    path: /etc/usbguard/usbguard-daemon.conf
+    regexp: '^AuditBackend='
+    line: AuditBackend=LinuxAudit
+  notify: Restart usbguard
+
+- name: Send root's mail to the admin user
+  ansible.builtin.lineinfile:
+    path: /etc/aliases
+    regexp: '^root:'
+    line: "root: {{ ansible_user }}"
+  notify: Rebuild aliases
+
+- name: Enable required services
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - usbguard
+    - postfix
+
+# Socket-activated: it exits when idle, so only enable it.
+- name: Enable pcscd
+  ansible.builtin.systemd_service:
+    name: pcscd
+    enabled: true
+
+- name: Enable fapolicyd
+  ansible.builtin.systemd_service:
+    name: fapolicyd
+    enabled: true
+    state: started
+  when: "'service_fapolicyd_enabled' not in hardening_exceptions"
+
+- name: Disable and mask kdump and debug-shell
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: false
+    state: stopped
+    masked: true
+  loop:
+    - kdump.service
+    - debug-shell.service
+
+# The image links ctrl-alt-del.target to reboot.target in /etc, which
+# `systemctl mask` refuses to overwrite. A link to /dev/null is a mask.
+- name: Mask Ctrl-Alt-Del reboot
+  ansible.builtin.file:
+    src: /dev/null
+    dest: /etc/systemd/system/ctrl-alt-del.target
+    state: link
+    force: true
+  notify: Reload systemd
+
+- name: Ignore repeated Ctrl-Alt-Del presses
+  community.general.ini_file:
+    path: /etc/systemd/system.conf
+    section: Manager
+    option: CtrlAltDelBurstAction
+    value: none
+    no_extra_spaces: true
+    mode: "0644"

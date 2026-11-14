@@ -6,6 +6,8 @@
     name: "{{ ansible_user }}"
     password: "{{ vault_admin_password_hash }}"
     update_password: always
+    password_expire_max: 60
+    password_expire_min: 1
   no_log: true
 
 - name: Confirm wheel members can sudo with a password

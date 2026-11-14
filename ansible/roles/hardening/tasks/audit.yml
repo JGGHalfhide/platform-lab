@@ -1,0 +1,90 @@
+---
+# auditd_*, audit_rules_*, audit_privileged_commands_*, audit_rules_immutable,
+# audit_rules_system_shutdown, file_permissions_audit_configuration_stig.
+- name: Configure auditd
+  ansible.builtin.lineinfile:
+    path: /etc/audit/auditd.conf
+    regexp: '^\s*{{ item.split("=")[0] | trim }}\s*='
+    line: "{{ item }}"
+    mode: "0600"
+  loop:
+    - admin_space_left = 5%
+    - admin_space_left_action = single
+    - disk_error_action = halt
+    - disk_full_action = halt
+    - freq = 100
+    - name_format = hostname
+    - space_left = 25%
+    - space_left_action = email
+  notify: Restart auditd
+
+# The STIG wants failure mode 2 (panic) set once, in the final rules file.
+- name: Remove the default audit failure mode
+  ansible.builtin.lineinfile:
+    path: /etc/audit/rules.d/audit.rules
+    regexp: '^-f\s'
+    state: absent
+
+- name: Install the STIG audit rules
+  ansible.builtin.template:
+    src: stig.rules.j2
+    dest: /etc/audit/rules.d/50-stig.rules
+    owner: root
+    group: root
+    mode: "0600"
+
+# Immutable rules: changing them later needs a reboot.
+- name: Make the audit rules immutable and panic on audit failure
+  ansible.builtin.copy:
+    dest: /etc/audit/rules.d/99-finalize.rules
+    content: |
+      -f 2
+      -e 2
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Restrict existing audit rule files
+  ansible.builtin.file:
+    path: /etc/audit/rules.d/audit.rules
+    mode: "0600"
+
+# augenrules recreates audit.rules at boot with mode 0640.
+- name: Create the auditd drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/auditd.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Keep the generated audit.rules at 0600
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/auditd.service.d/permissions.conf
+    content: |
+      [Service]
+      ExecStartPost=/usr/bin/chmod 0600 /etc/audit/audit.rules
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Restrict audit.rules now
+  ansible.builtin.file:
+    path: /etc/audit/audit.rules
+    mode: "0600"
+
+# auditd runs `augenrules --load` at boot. Once the rules are immutable,
+# augenrules cannot rewrite audit.rules, so a stale file means a reboot is
+# needed. Checked from state, not a handler, so a failed run can't lose it.
+- name: Check whether the loaded audit rules are current
+  ansible.builtin.command: augenrules --check
+  register: hardening_augenrules_check
+  changed_when: false
+  check_mode: false
+
+- name: Reboot later if the audit rules changed
+  ansible.builtin.set_fact:
+    hardening_reboot_required: true
+  # When current and immutable it prints "immutable mode", not "No change".
+  when: "'Rules have changed' in hardening_augenrules_check.stdout"

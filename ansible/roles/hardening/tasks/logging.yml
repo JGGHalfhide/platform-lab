@@ -1,0 +1,62 @@
+---
+# rsyslog_remote_access_monitoring, chronyd_*, networkmanager_dns_mode.
+- name: Log authentication and daemon messages
+  ansible.builtin.copy:
+    dest: /etc/rsyslog.d/50-stig.conf
+    content: |
+      # Managed by Ansible (hardening role).
+      auth.*;authpriv.* /var/log/secure
+      daemon.* /var/log/messages
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart rsyslog
+
+- name: Use time servers (not pools), client only, with a 2^16s max poll
+  ansible.builtin.copy:
+    dest: /etc/chrony.conf
+    content: |
+      # Managed by Ansible (hardening role).
+      {% for server in hardening_time_servers %}
+      server {{ server }} iburst maxpoll 16
+      {% endfor %}
+      sourcedir /run/chrony-dhcp
+      driftfile /var/lib/chrony/drift
+      makestep 1.0 3
+      rtcsync
+      keyfile /etc/chrony.keys
+      ntsdumpdir /var/lib/chrony
+      leapsectz right/UTC
+      logdir /var/log/chrony
+      port 0
+      cmdport 0
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart chronyd
+
+- name: Install the hardened chrony-wait unit
+  ansible.builtin.copy:
+    src: chrony-wait.service
+    dest: /etc/systemd/system/chrony-wait.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Enable chrony-wait
+  ansible.builtin.systemd_service:
+    name: chrony-wait.service
+    enabled: true
+    daemon_reload: true
+
+- name: Let NetworkManager manage resolv.conf the default way
+  community.general.ini_file:
+    path: /etc/NetworkManager/conf.d/50-stig-dns.conf
+    section: main
+    option: dns
+    value: default
+    no_extra_spaces: true
+    owner: root
+    group: root
+    mode: "0644"

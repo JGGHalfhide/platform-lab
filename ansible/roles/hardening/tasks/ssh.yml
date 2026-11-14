@@ -1,0 +1,100 @@
+---
+# sshd_*, disable_host_auth, sshd_enable_warning_banner, firewalld_sshd_port_enabled.
+# The drop-in sorts before 50-redhat.conf; sshd uses the first value it reads.
+- name: Write the login banner
+  ansible.builtin.copy:
+    dest: "{{ item }}"
+    content: "{{ hardening_login_banner }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - /etc/issue
+    - /etc/issue.net
+
+- name: Configure sshd
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/00-stig.conf
+    content: |
+      # Managed by Ansible (hardening role).
+      Banner /etc/issue
+      ClientAliveCountMax 1
+      ClientAliveInterval 600
+      GSSAPIAuthentication no
+      HostbasedAuthentication no
+      IgnoreRhosts yes
+      IgnoreUserKnownHosts yes
+      KerberosAuthentication no
+      LogLevel VERBOSE
+      PermitEmptyPasswords no
+      PermitRootLogin no
+      PermitUserEnvironment no
+      PrintLastLog yes
+      PubkeyAuthentication yes
+      RekeyLimit 1G 1h
+      StrictModes yes
+      X11Forwarding no
+      X11UseLocalhost yes
+    owner: root
+    group: root
+    mode: "0600"
+    validate: /usr/sbin/sshd -t -f %s
+  notify: Restart sshd
+
+# The check fails if another config file sets a different value, even one
+# sshd would ignore.
+- name: Remove conflicting settings from the packaged sshd config
+  ansible.builtin.lineinfile:
+    path: "{{ item[0] }}"
+    regexp: '^\s*{{ item[1] }}\s'
+    state: absent
+    validate: /usr/sbin/sshd -t -f %s
+  loop: "{{ ['/etc/ssh/sshd_config.d/50-redhat.conf', '/etc/ssh/sshd_config'] | product(['GSSAPIAuthentication', 'X11Forwarding']) | list }}"
+  notify: Restart sshd
+
+# The check reads the zone from NetworkManager keyfiles. cloud-init writes the
+# legacy ifcfg format (deprecated in EL9); migrate it to a keyfile in place.
+- name: Find legacy ifcfg connection profiles
+  ansible.builtin.find:
+    paths: /etc/sysconfig/network-scripts
+    patterns: ifcfg-*
+    excludes: ifcfg-lo
+  register: hardening_ifcfg_profiles
+
+- name: Migrate ifcfg profiles to NetworkManager keyfiles
+  ansible.builtin.command: nmcli connection migrate
+  when: hardening_ifcfg_profiles.matched > 0
+  changed_when: true
+
+# The check also requires the connection to be bound to the zone explicitly.
+- name: Find NetworkManager connection profiles
+  ansible.builtin.find:
+    paths: /etc/NetworkManager/system-connections
+    patterns: "*.nmconnection"
+  register: hardening_nm_connections
+
+- name: Put NetworkManager connections in the public zone
+  community.general.ini_file:
+    path: "{{ item.path }}"
+    section: connection
+    option: zone
+    value: public
+    no_extra_spaces: true
+    mode: "0600"
+  loop: "{{ hardening_nm_connections.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+  notify: Reload NetworkManager connections
+
+# The check wants ssh listed in every active zone; `trusted` (pod and service
+# CIDRs) already accepts everything, so this changes nothing there.
+- name: Allow SSH in the active firewall zones
+  ansible.posix.firewalld:
+    zone: "{{ item }}"
+    service: ssh
+    permanent: true
+    immediate: true
+    state: enabled
+  loop:
+    - public
+    - trusted

@@ -1,15 +1,6 @@
 # One-shot kube-bench run against the RKE2 CIS benchmark.
-# Applied and removed by scripts/kube-bench.sh (make bench); not part of GitOps.
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: kube-bench
-  labels:
-    # The scanner needs hostPID and host paths; the RKE2 CIS default is restricted.
-    pod-security.kubernetes.io/enforce: privileged
-    pod-security.kubernetes.io/warn: privileged
-    pod-security.kubernetes.io/audit: privileged
----
+# Applied and removed by scripts/kube-bench.sh (make bench) after namespace.yaml;
+# not part of GitOps.
 # The scanner must not trip the checks it runs: no automounted tokens (5.1.5,
 # 5.1.6) and no wildcard RBAC (5.1.3).
 apiVersion: v1
