@@ -1,0 +1,42 @@
+---
+# Evaluate the node against openscap_profile and fetch the HTML and XCCDF
+# results to the controller. Read-only on the node apart from a temp dir.
+- name: Create a scan working directory
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: oscap.
+  register: openscap_tmp
+
+- name: Run the scan and fetch the reports
+  block:
+    # oscap exits 2 when any rule fails; that is a result, not an error.
+    - name: Evaluate the profile
+      ansible.builtin.command:
+        argv:
+          - oscap
+          - xccdf
+          - eval
+          - --profile
+          - "{{ openscap_profile }}"
+          - --results
+          - "{{ openscap_tmp.path }}/results.xml"
+          - --report
+          - "{{ openscap_tmp.path }}/report.html"
+          - "{{ openscap_datastream }}"
+      register: openscap_eval
+      changed_when: false
+      failed_when: openscap_eval.rc not in [0, 2]
+
+    - name: Fetch the reports
+      ansible.builtin.fetch:
+        src: "{{ openscap_tmp.path }}/{{ item.src }}"
+        dest: "{{ openscap_report_dir }}/{{ openscap_report_name }}.{{ item.ext }}"
+        flat: true
+      loop:
+        - { src: report.html, ext: html }
+        - { src: results.xml, ext: xml }
+  always:
+    - name: Remove the scan working directory
+      ansible.builtin.file:
+        path: "{{ openscap_tmp.path }}"
+        state: absent

@@ -69,9 +69,12 @@ Continue Week 1 in ROADMAP.md. Write the Ansible base role and the RKE2 role (CI
 
 Goal: measurable before/after STIG results on the node OS.
 
-- [ ] Install `openscap-scanner` and `scap-security-guide` on the VM via Ansible
+- [x] Install `openscap-scanner` and `scap-security-guide` on the VM via Ansible
+  - `openscap` role in `site.yml` (openscap-scanner 1.3.14, scap-security-guide 0.1.82). Datastream `ssg-rl9-ds.xml`, profile `xccdf_org.ssgproject.content_profile_stig` (Rocky's port of the RHEL 9 DISA STIG; DISA publishes no STIG for Rocky itself).
 - [ ] Note for the hardening role: `rpcbind` is listening on 111 (blocked by firewalld, but the STIG wants it removed or disabled)
-- [ ] Baseline OpenSCAP scan against the STIG profile for the installed datastream (list `/usr/share/xml/scap/ssg/content/` to find it); HTML and XML reports to `docs/scans/week2-baseline.*`
+- [x] Baseline OpenSCAP scan against the STIG profile for the installed datastream (list `/usr/share/xml/scap/ssg/content/` to find it); HTML and XML reports to `docs/scans/week2-baseline.*`
+  - `make stig-scan NAME=<name>` runs `ansible/stig-scan.yml` (about 30s) and fetches the HTML report and XCCDF results. Only `.gz` copies are committed; raw files are ~27 MB per scan and gitignored.
+  - Baseline 11/14: 164 pass, 261 fail (38.6% of 425 scored rules); 10 notchecked, 42 notapplicable. Fails by severity: 11 high, 227 medium, 20 low, 3 unknown.
 - [ ] Ansible hardening role covering the failed rules (generate remediation with `oscap xccdf generate fix` as a starting point, then convert to idempotent tasks)
 - [ ] Re-scan; reports to `docs/scans/week2-hardened.*`
 - [ ] `docs/hardening.md`: table of rule IDs, status, and any documented exceptions

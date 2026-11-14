@@ -13,3 +13,6 @@ tfplan
 *.tfplan
 ansible/inventory.ini
 ansible/.known_hosts
+# Raw OpenSCAP reports; the .gz copies are committed.
+docs/scans/*.html
+docs/scans/*.xml

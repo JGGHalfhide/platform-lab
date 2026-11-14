@@ -1,0 +1,5 @@
+---
+- name: Install OpenSCAP scanner and SCAP content
+  ansible.builtin.dnf:
+    name: "{{ openscap_packages }}"
+    state: present

@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  author: platform-lab
+  description: OpenSCAP scanner and SCAP content for STIG scans on Rocky Linux 9
+  license: MIT
+  min_ansible_version: "2.16"
+  platforms:
+    - name: EL
+      versions:
+        - "9"
+dependencies: []

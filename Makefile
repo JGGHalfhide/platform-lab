@@ -1,4 +1,4 @@
-.PHONY: host up inventory down verify bench
+.PHONY: host up inventory down verify bench stig-scan
 
 host:
 	./scripts/host-bootstrap.sh
@@ -24,3 +24,12 @@ verify:
 # kube-bench (RKE2 CIS 1.9) as a one-shot Job; OUT sets the report path.
 bench:
 	./scripts/kube-bench.sh $(OUT)
+
+# OpenSCAP STIG scan of the node; reports to docs/scans/$(NAME).{html,xml}.
+# Only the .gz copies are committed (raw files are ~27 MB per scan).
+NAME ?= stig-scan
+stig-scan:
+	cd ansible && ansible-playbook stig-scan.yml -e openscap_report_name=$(NAME)
+	gzip -9 -k -f docs/scans/$(NAME).html docs/scans/$(NAME).xml
+	@echo "Rule results for $(NAME):"
+	@grep -o '<result>[a-z]*</result>' docs/scans/$(NAME).xml | sed 's/<[^>]*>//g' | sort | uniq -c

@@ -36,6 +36,7 @@ internet to a second cluster. 8-week build, about 7-10 hours per week.
 - make down: terraform destroy
 - make verify: kubectl get nodes against ./kubeconfig
 - make bench OUT=docs/scans/<name>.txt: kube-bench Job, report saved, Job removed
+- make stig-scan NAME=<name>: OpenSCAP STIG scan, reports to docs/scans/<name>.*
 
 ## Conventions
 - Everything is reproducible from the repo: no manual steps on VMs.
@@ -72,5 +73,9 @@ Done (11/14): kube-bench baseline (`make bench`, RKE2 CIS 1.9): 81 pass, 0 fail,
 42 warn (manual checks); docs/scans/week1-kube-bench.txt.
 Done (11/14): Week 1 complete, tagged v0.1. Rebuild from scratch: 4m34s to a Ready
 node; RKE2 pinned with dnf versionlock (the package update had moved it to 1.36.6).
-Next: Week 2 (OpenSCAP STIG baseline, hardening role). See ROADMAP.md for the checklist.
+Week 2 (OS hardening):
+Done (11/14): `openscap` role and `make stig-scan NAME=...`; baseline STIG scan
+164 pass / 261 fail (38.6%), docs/scans/week2-baseline.{html,xml}.gz.
+Next: hardening role for the failed rules (approach and FIPS/GRUB decisions pending).
+See ROADMAP.md for the checklist.
 Note: in Claude Code sessions run ansible with `</dev/null` (non-blocking IO error otherwise).

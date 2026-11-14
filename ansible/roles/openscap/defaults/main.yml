@@ -1,0 +1,12 @@
+---
+openscap_packages:
+  - openscap-scanner
+  - scap-security-guide
+
+# Rocky's port of the RHEL 9 DISA STIG profile (scap-security-guide content).
+openscap_datastream: /usr/share/xml/scap/ssg/content/ssg-rl{{ ansible_facts['distribution_major_version'] }}-ds.xml
+openscap_profile: xccdf_org.ssgproject.content_profile_stig
+
+# Scan output on the controller: <dir>/<name>.html and <dir>/<name>.xml.
+openscap_report_dir: "{{ playbook_dir }}/../docs/scans"
+openscap_report_name: stig-scan

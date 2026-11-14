@@ -1,0 +1,10 @@
+---
+# Usage: ansible-playbook stig-scan.yml -e openscap_report_name=<name>
+- name: OpenSCAP STIG scan
+  hosts: rke2_servers
+  become: true
+  tasks:
+    - name: Scan and fetch reports
+      ansible.builtin.include_role:
+        name: openscap
+        tasks_from: scan
