@@ -13,8 +13,10 @@ role; scans are run with `make stig-scan`.
   Rocky 9", not an official DISA result.
 - The scan is not tailored: rules we chose not to fix still count as fails
   and are listed under Exceptions below.
-- Reports: `docs/scans/week2-baseline.{html,xml}.gz` and
-  `docs/scans/week2-hardened.{html,xml}.gz`.
+- Reports: `docs/scans/week2-baseline.{html,xml}.gz`,
+  `docs/scans/week2-hardened.{html,xml}.gz` (VM hardened in place) and
+  `docs/scans/week2-rebuild.{html,xml}.gz` (fresh `make down && make up`;
+  identical result, 399 pass / 28 fail).
 
 ## Results
 

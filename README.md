@@ -1,7 +1,7 @@
 # platform-lab
 
 Airgapped, STIG-hardened Kubernetes platform built on personal lab hardware.
-Status: Week 1 (foundation) complete, tagged v0.1. Next: Week 2 (OS hardening).
+Status: Week 2 (OS hardening) complete, tagged v0.2: DISA STIG scan 38.6% -> 93.4% (see docs/hardening.md). Next: Week 3.
 
 ## Rebuild time
 
@@ -10,6 +10,7 @@ Measured from scratch on the build host (base image already in the pool):
 | Date       | `make down` | `make up` (to Ready node) |
 |------------|-------------|---------------------------|
 | 2026-11-14 | 2s          | 4m34s                     |
+| 2026-11-14 | 2s          | 7m20s (with STIG hardening, FIPS, AIDE; 2 reboots) |
 
 ## Secrets and keys (not in the repo)
 

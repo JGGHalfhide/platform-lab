@@ -83,8 +83,10 @@ Goal: measurable before/after STIG results on the node OS.
 - [x] `docs/hardening.md`: table of rule IDs, status, and any documented exceptions
 - [x] Confirm RKE2 still starts and passes kube-bench after hardening
   - kube-bench 81 pass / 0 fail (`docs/scans/week2-kube-bench.txt`); pod-to-pod, Service, DNS, egress and NodePort tests pass.
-- [ ] Full `make down && make up` rebuild with hardening (acceptance; the Terraform key change replaces the VM anyway)
-- [ ] Tag `v0.2`; publish Post 1 (hardening results)
+- [x] Full `make down && make up` rebuild with hardening (acceptance; the Terraform key change replaces the VM anyway)
+  - 11/14: `make up` 7m20s to a Ready hardened node; second run `changed=0`; scan 399/28 and kube-bench 0 fail, same as the incrementally hardened VM. The first attempt found an AIDE config bug that only shows on a fresh image (fixed).
+- [x] Tag `v0.2`
+- [ ] Publish Post 1 (hardening results)
 
 Acceptance: second scan shows a measurable pass-rate increase; `make up` still works end to end.
 

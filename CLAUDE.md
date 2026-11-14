@@ -80,8 +80,8 @@ Done (11/14): `openscap` role and `make stig-scan NAME=...`; baseline STIG scan
 Done (11/14): `hardening` role (Vault secrets, FIPS:STIG, SSH, PAM/authselect,
 audit, kernel, GRUB, AIDE; 28 exceptions in hardening_exceptions). Rescan:
 399 pass / 28 fail (93.4%); kube-bench still 0 fail; docs/hardening.md.
-Lab SSH key is ~/.ssh/platform-lab_ecdsa (FIPS rejects ed25519). The next
-`make up` replaces the VM (Terraform key default changed).
-Next: full `make down && make up` rebuild with hardening (ask first), then tag v0.2.
+Lab SSH key is ~/.ssh/platform-lab_ecdsa (FIPS rejects ed25519).
+Done (11/14): from-scratch rebuild 7m20s, same results; Week 2 tagged v0.2.
+Next: Post 1 (hardening results, user writes it), then Week 3.
 See ROADMAP.md for the checklist.
 Note: in Claude Code sessions run ansible with `</dev/null` (non-blocking IO error otherwise).
