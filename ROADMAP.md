@@ -50,9 +50,12 @@ Goal: `make up` builds a Ready, CIS-profile RKE2 cluster from nothing.
   - `make bench OUT=...` runs kube-bench v0.16.0 (pinned by digest) as a Job with `--benchmark rke2-cis-1.9` (newest RKE2 benchmark in kube-bench; the cluster is 1.36), then deletes it.
   - Baseline 11/14: 81 PASS, 0 FAIL, 42 WARN (all Manual checks), 7 INFO.
   - The scanner must not trip its own section 5 checks: an earlier run showed 3 FAILs (5.1.3, 5.1.5, 5.1.6) caused by its wildcard ClusterRole and automounted token. Fixed with scoped read-only RBAC and an explicitly projected token.
-- [ ] Makefile: `up`, `down`, `verify`; full rebuild timed and recorded in README
+- [x] Makefile: `up`, `down`, `verify`; full rebuild timed and recorded in README
+  - 11/14: `make down` 2s, `make up` 4m34s to a Ready node; second playbook run `changed=0`.
+  - Found by the rebuild: the base role's package update moved RKE2 from the pinned 1.36.5 to 1.36.6 on the second run (the repo serves every 1.36 patch). Fixed with a dnf versionlock on `rke2-server`/`rke2-common`, written before install so bumping `rke2_version` still upgrades.
+  - The VM address is DHCP-assigned and changes per rebuild; inventory, `tls-san` and the kubeconfig follow the Terraform output.
   - `up` already uses plain `terraform init` (provider versions come from `.terraform.lock.hcl`).
-- [ ] Tag `v0.1`
+- [x] Tag `v0.1`
 
 Acceptance: `make down && make up` produces `kubectl get nodes` Ready with no manual steps.
 

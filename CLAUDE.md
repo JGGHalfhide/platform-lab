@@ -61,7 +61,7 @@ RKE2 role with CIS profile, kube-bench baseline saved to docs/.
 Done when `make up` builds a Ready single-node cluster from scratch.
 
 Done (10/13): host bootstrap (`make host`: default pool + pinned Rocky 9.8
-image) and Terraform for one VM (`build-node-01`, 192.168.122.61).
+image) and Terraform for one VM (`build-node-01`, DHCP address from `terraform output vm_ip`).
 Done (10/13): Ansible inventory (`make inventory`) and base role (updates,
 chrony, firewalld kept on with RKE2 ports and pod/service CIDRs trusted,
 NetworkManager CNI exclusions, SELinux enforcing); idempotent.
@@ -70,5 +70,7 @@ CIS sysctls, kubeconfig at ./kubeconfig); node Ready; pod networking verified
 with firewalld on.
 Done (11/14): kube-bench baseline (`make bench`, RKE2 CIS 1.9): 81 pass, 0 fail,
 42 warn (manual checks); docs/scans/week1-kube-bench.txt.
-Next: the timed `make down && make up` rebuild and tag v0.1. See ROADMAP.md for the checklist.
+Done (11/14): Week 1 complete, tagged v0.1. Rebuild from scratch: 4m34s to a Ready
+node; RKE2 pinned with dnf versionlock (the package update had moved it to 1.36.6).
+Next: Week 2 (OpenSCAP STIG baseline, hardening role). See ROADMAP.md for the checklist.
 Note: in Claude Code sessions run ansible with `</dev/null` (non-blocking IO error otherwise).
