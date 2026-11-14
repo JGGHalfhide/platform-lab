@@ -1,0 +1,8 @@
+---
+# Default cloud-init user on the Rocky GenericCloud image (terraform var.ssh_user).
+ansible_user: rocky
+# ECDSA P-384: FIPS mode rejects ed25519 keys. Must match terraform
+# var.ssh_public_key_path.
+ansible_ssh_private_key_file: ~/.ssh/platform-lab_ecdsa
+# STIG removes passwordless sudo; the password is in vault.yml.
+ansible_become_password: "{{ vault_admin_password }}"

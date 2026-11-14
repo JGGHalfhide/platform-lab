@@ -1,0 +1,8 @@
+---
+# Rules deliberately not remediated, keyed by scap-security-guide rule ID.
+# Tasks that implement a listed rule are skipped. Every entry needs a reason;
+# docs/hardening.md mirrors this list.
+hardening_exceptions: {}
+
+# FIPS mode plus the STIG SSH sub-policy (STIG profile value: FIPS:STIG).
+hardening_crypto_policy: FIPS:STIG

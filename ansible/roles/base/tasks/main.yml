@@ -1,4 +1,9 @@
 ---
+- name: Authorize the lab SSH key for the admin user
+  ansible.posix.authorized_key:
+    user: "{{ ansible_user }}"
+    key: "{{ base_admin_ssh_public_key }}"
+
 - name: Update all packages
   ansible.builtin.dnf:
     name: "*"

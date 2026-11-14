@@ -58,7 +58,7 @@ variable "ssh_user" {
 }
 
 variable "ssh_public_key_path" {
-  description = "Path to the SSH public key installed for ssh_user via cloud-init."
+  description = "Path to the SSH public key installed for ssh_user via cloud-init. ECDSA P-384, since FIPS mode rejects ed25519."
   type        = string
-  default     = "~/.ssh/id_ed25519.pub"
+  default     = "~/.ssh/platform-lab_ecdsa.pub"
 }

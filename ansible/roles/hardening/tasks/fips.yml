@@ -1,0 +1,44 @@
+---
+# sysctl_crypto_fips_enabled, configure_crypto_policy, fips_crypto_subpolicy,
+# fips_custom_stig_sub_policy, harden_sshd_{ciphers,macs}_*_crypto_policy.
+# FIPS needs a reboot; RKE2 restarts on boot.
+- name: Install the STIG crypto sub-policy
+  ansible.builtin.copy:
+    dest: /etc/crypto-policies/policies/modules/STIG.pmod
+    content: |
+      cipher@SSH=AES-256-GCM AES-256-CTR AES-128-GCM AES-128-CTR
+      mac@SSH=HMAC-SHA2-512 HMAC-SHA2-256
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Check FIPS mode
+  ansible.builtin.command: fips-mode-setup --is-enabled
+  register: hardening_fips_check
+  changed_when: false
+  failed_when: hardening_fips_check.rc not in [0, 2]
+  check_mode: false
+
+- name: Enable FIPS mode
+  ansible.builtin.command: fips-mode-setup --enable
+  when: hardening_fips_check.rc != 0
+  register: hardening_fips_enable
+  changed_when: true
+
+- name: Read the current crypto policy
+  ansible.builtin.command: update-crypto-policies --show
+  register: hardening_crypto_policy_current
+  changed_when: false
+  check_mode: false
+
+- name: Set the system crypto policy
+  ansible.builtin.command: update-crypto-policies --set {{ hardening_crypto_policy }}
+  when: hardening_crypto_policy_current.stdout != hardening_crypto_policy
+  register: hardening_crypto_policy_set
+  changed_when: true
+
+# Services only pick up FIPS and the new policy after a reboot.
+- name: Reboot to apply FIPS mode and the crypto policy
+  ansible.builtin.reboot:
+    reboot_timeout: 900
+  when: hardening_fips_enable is changed or hardening_crypto_policy_set is changed

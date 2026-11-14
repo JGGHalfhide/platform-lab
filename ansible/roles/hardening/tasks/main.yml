@@ -1,0 +1,8 @@
+---
+- name: Admin account and sudo
+  ansible.builtin.import_tasks: admin.yml
+  tags: [hardening, admin]
+
+- name: FIPS mode and crypto policy
+  ansible.builtin.import_tasks: fips.yml
+  tags: [hardening, fips]

@@ -47,7 +47,8 @@ internet to a second cluster. 8-week build, about 7-10 hours per week.
 - No AI attribution in commits or PRs (no Co-Authored-By or "Generated with" lines).
 - Tag the repo at the end of each week (v0.1, v0.2, ...).
 - ADRs live in docs/adr/NNNN-title.md and state the decision and its context only.
-- Secrets, kubeconfigs, and state files are never committed.
+- Secrets, kubeconfigs, and state files are never committed. Secrets go in
+  ansible/group_vars/all/vault.yml (Ansible Vault; key at ~/.config/platform-lab/vault-pass).
 - Ask before running terraform destroy or any command that deletes VMs or volumes.
 
 ## Ground rules
@@ -76,6 +77,11 @@ node; RKE2 pinned with dnf versionlock (the package update had moved it to 1.36.
 Week 2 (OS hardening):
 Done (11/14): `openscap` role and `make stig-scan NAME=...`; baseline STIG scan
 164 pass / 261 fail (38.6%), docs/scans/week2-baseline.{html,xml}.gz.
-Next: hardening role for the failed rules (approach and FIPS/GRUB decisions pending).
+Done (11/14): hardening role phase 1: Vault (sudo + GRUB passwords), lab key
+~/.ssh/platform-lab_ecdsa (FIPS rejects ed25519), sudo needs a password,
+FIPS mode on with crypto policy FIPS:STIG; RKE2 healthy; idempotent.
+Note: terraform's key default changed, so the next `make up` replaces the VM.
+Next: hardening phase 2 (SSH, auth/PAM, audit, kernel, boot/GRUB, packages,
+AIDE), with exceptions in hardening_exceptions.
 See ROADMAP.md for the checklist.
 Note: in Claude Code sessions run ansible with `</dev/null` (non-blocking IO error otherwise).

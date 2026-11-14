@@ -35,3 +35,7 @@ base_nm_unmanaged_interfaces:
   - vxlan-v6.calico
   - wireguard.cali
   - wg-v6.cali
+
+# Lab SSH key for the admin user. cloud-init installs it on new VMs; managed
+# here too so a key change reaches existing VMs.
+base_admin_ssh_public_key: "{{ lookup('ansible.builtin.file', '~/.ssh/platform-lab_ecdsa.pub') }}"

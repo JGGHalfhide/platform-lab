@@ -1,0 +1,44 @@
+---
+# sudo_remove_nopasswd, sudo_require_reauthentication, sudoers_validate_passwd.
+# Order matters: the password is set before passwordless sudo is removed.
+- name: Set the admin user's password (used for sudo)
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    password: "{{ vault_admin_password_hash }}"
+    update_password: always
+  no_log: true
+
+- name: Confirm wheel members can sudo with a password
+  ansible.builtin.lineinfile:
+    path: /etc/sudoers
+    regexp: '^%wheel\s+ALL=\(ALL\)\s+ALL$'
+    line: "%wheel\tALL=(ALL)\tALL"
+    validate: visudo -cf %s
+
+- name: Require reauthentication and the user's own password for sudo
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/00-stig
+    content: |
+      # Managed by Ansible (hardening role).
+      Defaults timestamp_timeout=0
+      Defaults !targetpw
+      Defaults !rootpw
+      Defaults !runaspw
+    owner: root
+    group: root
+    mode: "0440"
+    validate: visudo -cf %s
+
+- name: Remove cloud-init's passwordless sudo rule
+  ansible.builtin.file:
+    path: /etc/sudoers.d/90-cloud-init-users
+    state: absent
+
+# The GenericCloud image also has a NOPASSWD line for the default user in
+# /etc/sudoers itself.
+- name: Remove active NOPASSWD rules from /etc/sudoers
+  ansible.builtin.lineinfile:
+    path: /etc/sudoers
+    regexp: '^[^#].*NOPASSWD'
+    state: absent
+    validate: visudo -cf %s
