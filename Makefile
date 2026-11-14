@@ -1,4 +1,4 @@
-.PHONY: host up inventory down verify
+.PHONY: host up inventory down verify bench
 
 host:
 	./scripts/host-bootstrap.sh
@@ -20,3 +20,7 @@ down:
 
 verify:
 	kubectl --kubeconfig kubeconfig get nodes -o wide
+
+# kube-bench (RKE2 CIS 1.9) as a one-shot Job; OUT sets the report path.
+bench:
+	./scripts/kube-bench.sh $(OUT)

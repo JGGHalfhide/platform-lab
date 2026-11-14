@@ -46,9 +46,12 @@ Goal: `make up` builds a Ready, CIS-profile RKE2 cluster from nothing.
   - RKE2 v1.36.5+rke2r1 (stable) from the signed rpm.rancher.io repos, version pinned; signing key pinned by fingerprint. `rke2` runs as `container_runtime_t`; etcd runs as `etcd`, data dir `etcd:etcd 0700`. Idempotent (`changed=0`).
   - Firewalld option (a) verified 10/13: pod-to-pod, Service by name, cluster and external DNS, pod egress, pod-to-API, node-to-pod, NodePort from the build host all pass; listening but unopened ports (8081, 9091, 111) are rejected from outside.
   - `kubectl` 1.37.1 installed on the build host (pacman); `make verify` shows the node Ready over TLS via `tls-san`.
-- [ ] kube-bench baseline saved to `docs/scans/week1-kube-bench.txt`
+- [x] kube-bench baseline saved to `docs/scans/week1-kube-bench.txt`
+  - `make bench OUT=...` runs kube-bench v0.16.0 (pinned by digest) as a Job with `--benchmark rke2-cis-1.9` (newest RKE2 benchmark in kube-bench; the cluster is 1.36), then deletes it.
+  - Baseline 11/14: 81 PASS, 0 FAIL, 42 WARN (all Manual checks), 7 INFO.
+  - The scanner must not trip its own section 5 checks: an earlier run showed 3 FAILs (5.1.3, 5.1.5, 5.1.6) caused by its wildcard ClusterRole and automounted token. Fixed with scoped read-only RBAC and an explicitly projected token.
 - [ ] Makefile: `up`, `down`, `verify`; full rebuild timed and recorded in README
-  - Change `terraform init -upgrade` in `up` to plain `terraform init` so rebuilds use the provider versions locked in `.terraform.lock.hcl`.
+  - `up` already uses plain `terraform init` (provider versions come from `.terraform.lock.hcl`).
 - [ ] Tag `v0.1`
 
 Acceptance: `make down && make up` produces `kubectl get nodes` Ready with no manual steps.

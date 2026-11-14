@@ -35,6 +35,7 @@ internet to a second cluster. 8-week build, about 7-10 hours per week.
 - make up: terraform apply, then run the Ansible playbook
 - make down: terraform destroy
 - make verify: kubectl get nodes against ./kubeconfig
+- make bench OUT=docs/scans/<name>.txt: kube-bench Job, report saved, Job removed
 
 ## Conventions
 - Everything is reproducible from the repo: no manual steps on VMs.
@@ -67,6 +68,7 @@ NetworkManager CNI exclusions, SELinux enforcing); idempotent.
 Done (10/13): RKE2 role (v1.36.5+rke2r1, CIS profile, SELinux, etcd user,
 CIS sysctls, kubeconfig at ./kubeconfig); node Ready; pod networking verified
 with firewalld on.
-Next: kube-bench baseline (docs/scans/week1-kube-bench.txt), then the timed
-`make down && make up` rebuild and tag v0.1. See ROADMAP.md for the checklist.
+Done (11/14): kube-bench baseline (`make bench`, RKE2 CIS 1.9): 81 pass, 0 fail,
+42 warn (manual checks); docs/scans/week1-kube-bench.txt.
+Next: the timed `make down && make up` rebuild and tag v0.1. See ROADMAP.md for the checklist.
 Note: in Claude Code sessions run ansible with `</dev/null` (non-blocking IO error otherwise).
