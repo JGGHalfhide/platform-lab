@@ -37,6 +37,27 @@
     repo_gpgcheck: true
     gpgkey: "{{ rke2_gpg_key_url }}"
 
+# Without a lock, the base role's package update moves RKE2 to the newest
+# release in the minor-version repo. Locking before install also lets a change
+# to rke2_version upgrade cleanly (the old lock line is replaced).
+- name: Install the dnf versionlock plugin
+  ansible.builtin.dnf:
+    name: python3-dnf-plugin-versionlock
+    state: present
+
+- name: Lock RKE2 packages to rke2_version
+  ansible.builtin.lineinfile:
+    path: /etc/dnf/plugins/versionlock.list
+    regexp: "^{{ item }}-[0-9]+:"
+    line: "{{ item }}-0:{{ rke2_version }}-*"
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - rke2-server
+    - rke2-common
+
 # Pulls in rke2-common and rke2-selinux. The RPM also sets RKE2_SELINUX=true.
 - name: Install rke2-server
   ansible.builtin.dnf:
