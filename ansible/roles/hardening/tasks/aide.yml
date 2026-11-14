@@ -1,12 +1,28 @@
 ---
 # aide_use_fips_hashes, aide_verify_acls, aide_verify_ext_attributes,
 # aide_check_audit_tools, aide_build_database, aide_scan_notification.
-- name: Remove non-FIPS hashes from AIDE rule groups
+# A hash can be first, in the middle or last in a group ("sha1+rmd160+...");
+# remove it with its own "+" so the line stays valid (a leading "+" is a
+# syntax error that makes `aide --init` fail).
+- name: Remove non-FIPS hashes that are followed by another attribute
   ansible.builtin.replace:
     path: /etc/aide.conf
-    regexp: '^([A-Z][A-Za-z0-9_]*\s*=.*?)\+?\b{{ item }}\b'
+    regexp: '^([A-Z][A-Za-z0-9_]*\s*=\s*(?:\S*\+)?){{ item }}\+'
     replace: '\1'
-  loop: [md5, sha1, rmd160, sha256, tiger, haval, gost, crc32, whirlpool]
+  loop: &hardening_aide_weak_hashes [md5, sha1, rmd160, sha256, tiger, haval, gost, crc32, whirlpool]
+
+- name: Remove non-FIPS hashes at the end of a group
+  ansible.builtin.replace:
+    path: /etc/aide.conf
+    regexp: '^([A-Z][A-Za-z0-9_]*\s*=\s*\S*)\+{{ item }}(?=\s|$)'
+    replace: '\1'
+  loop: *hardening_aide_weak_hashes
+
+- name: Remove stray leading "+" from AIDE rule groups
+  ansible.builtin.replace:
+    path: /etc/aide.conf
+    regexp: '^([A-Z][A-Za-z0-9_]*\s*=\s*)\++'
+    replace: '\1'
 
 - name: Add sha512, ACLs and extended attributes to AIDE rule groups
   ansible.builtin.replace:
