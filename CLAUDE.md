@@ -83,6 +83,9 @@ audit, kernel, GRUB, AIDE; 28 exceptions in hardening_exceptions). Rescan:
 399 pass / 28 fail (93.4%); kube-bench still 0 fail; docs/hardening.md.
 Lab SSH key is ~/.ssh/platform-lab_ecdsa (FIPS rejects ed25519).
 Done (11/14): from-scratch rebuild 7m20s, same results; Week 2 tagged v0.2.
-Next: Post 1 (hardening results, user writes it), then Week 3.
+Week 3 (GitOps and registry):
+Done (11/14): Argo CD v3.6.1 (`make argocd`, run by `make up`), app-of-apps root
+(gitops/root.yaml -> gitops/apps/), Argo CD self-managed; restricted PSS, no exemption.
+Next: local-path-provisioner, then Zot. Post 1 (hardening results) is the user's to write.
 See ROADMAP.md for the checklist.
 Note: in Claude Code sessions run ansible with `</dev/null` (non-blocking IO error otherwise).

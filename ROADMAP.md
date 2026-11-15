@@ -100,9 +100,13 @@ Week 2 in ROADMAP.md. Add OpenSCAP scanning to the Ansible roles, run the baseli
 
 Goal: cluster state is driven from `gitops/`.
 
-- [ ] Install Argo CD (Helm or manifests) via an Ansible task or Makefile target, once
-- [ ] App-of-apps root application pointing at `gitops/apps/`
-- [ ] Argo CD manages itself from Git
+- [x] Install Argo CD (Helm or manifests) via an Ansible task or Makefile target, once
+  - 11/14: Argo CD v3.6.1 from the pinned upstream `install.yaml` via `gitops/argocd/kustomization.yaml`; `make argocd` (server-side apply; CRDs are too large for client-side), run by `make up`. No Helm on the host.
+  - Passes the CIS profile's cluster-wide `restricted` Pod Security level with no exemption (server dry run showed no warnings).
+- [x] App-of-apps root application pointing at `gitops/apps/`
+  - `gitops/root.yaml` (automated, prune, selfHeal), one Application per file in `gitops/apps/`. Argo CD reads the public GitHub repo, so changes must be pushed before they sync.
+- [x] Argo CD manages itself from Git
+  - `gitops/apps/argocd.yaml` points at the same kustomization used for bootstrap (ServerSideApply, selfHeal, no prune). Self-heal check: a deleted NetworkPolicy was restored in 2s.
 - [ ] In-cluster registry (Zot by default; Harbor optional) deployed via Argo CD, with persistent storage (local-path-provisioner)
 - [ ] Ingress using the controller bundled with the installed RKE2 version (v1.36 ships Traefik, `rke2-traefik` in `kube-system`)
 - [ ] Push a test image to the registry and pull it from a pod
