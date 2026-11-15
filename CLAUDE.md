@@ -105,7 +105,9 @@ gate (fixable CRITICAL), push over TLS with upstream digest preserved; build/ gi
 Done (11/15): cosign key pair (`scripts/cosign-keygen.sh`): private key
 ~/.config/platform-lab/cosign.key, password in Vault (vault_cosign_password),
 public key pki/cosign.pub. No Rekor: sign with --use-signing-config=false --tlog-upload=false.
-Next: sign images and attach SBOM attestations.
+Done (11/15): `make image` signs the index digest and attaches the SPDX SBOM as a cosign
+attestation (tag-based .sig/.att via --new-bundle-format=false; skipped when already valid).
+Next: Kyverno via Argo CD (the GitHub Actions item is optional).
 Post 1 (hardening results) is the user's to write.
 See ROADMAP.md for the checklist.
 Note: in Claude Code sessions run ansible with `</dev/null` (non-blocking IO error otherwise).

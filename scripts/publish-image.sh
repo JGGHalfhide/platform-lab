@@ -11,6 +11,13 @@
 #    vulnerability at GATE_SEVERITY that has a fix. Documented exceptions go
 #    in .trivyignore at the repo root. GATE_SEVERITY=none skips the gate.
 # 4. Push to $REGISTRY/<repo>:<tag> and check the digest is unchanged.
+# 5. cosign: sign the index digest and attach the SPDX SBOM as an attestation
+#    (type spdxjson), with the key from scripts/cosign-keygen.sh, then verify
+#    both against pki/cosign.pub. No transparency log: the airgapped target
+#    can't reach Rekor. Signatures use cosign's tag-based layout
+#    (sha256-<digest>.sig/.att) rather than v3's default OCI referrers
+#    bundle: it is the format Kyverno and Zarf have supported longest.
+#    SIGN=0 skips this step.
 #
 # Outputs land in build/images/<repo>/<digest>/ (gitignored); the last line
 # printed is the pushed reference, pinned by digest.
@@ -19,6 +26,8 @@ source "$(dirname "$0")/lib.sh"
 
 SCAN_PLATFORM="${SCAN_PLATFORM:-linux/amd64}"
 GATE_SEVERITY="${GATE_SEVERITY:-CRITICAL}"
+SIGN="${SIGN:-1}"
+COSIGN_KEY="${COSIGN_KEY:-$HOME/.config/platform-lab/cosign.key}"
 
 src="${1:?usage: $0 <image-ref>}"
 repo="$(registry_repo "$src")"
@@ -114,6 +123,34 @@ pushed="$(crane digest "$REGISTRY/$repo:$tag")"
 if [[ "$pushed" != "$digest" ]]; then
   echo "Pushed digest $pushed differs from upstream $digest" >&2
   exit 1
+fi
+
+target="$REGISTRY/$repo@$digest"
+verify_flags=(--key "$REPO_ROOT/pki/cosign.pub" --insecure-ignore-tlog --new-bundle-format=false)
+verified() {
+  cosign verify "${verify_flags[@]}" "$target" >"$out/cosign-verify.json" 2>/dev/null &&
+    cosign verify-attestation "${verify_flags[@]}" --type spdxjson "$target" \
+      >"$out/cosign-verify-attestation.json" 2>/dev/null
+}
+# Re-running must not stack attestations (each run's SBOM differs in its
+# timestamp and ID), so skip when a valid signature and SBOM already exist.
+if [[ "$SIGN" == 1 ]] && verified; then
+  echo "==> Already signed with an SBOM attestation (pki/cosign.pub); skipping cosign"
+elif [[ "$SIGN" == 1 ]]; then
+  echo "==> Signing and attesting the SBOM (cosign)"
+  COSIGN_PASSWORD="$(vault_get vault_cosign_password)"
+  export COSIGN_PASSWORD
+  cosign_flags=(--yes --key "$COSIGN_KEY" --new-bundle-format=false
+    --use-signing-config=false --tlog-upload=false)
+  cosign sign "${cosign_flags[@]}" "$target" 2>"$out/cosign-sign.log" ||
+    { cat "$out/cosign-sign.log" >&2; exit 1; }
+  cosign attest "${cosign_flags[@]}" --type spdxjson \
+    --predicate "$out/sbom.spdx.json" "$target" 2>"$out/cosign-attest.log" ||
+    { cat "$out/cosign-attest.log" >&2; exit 1; }
+  unset COSIGN_PASSWORD
+
+  verified || { echo "Signature or SBOM attestation verification failed for $target" >&2; exit 1; }
+  echo "    signature and SBOM attestation verified"
 fi
 
 printf '%s\n' "$pinned" >"$out/source"

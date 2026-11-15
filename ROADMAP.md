@@ -144,7 +144,11 @@ Goal: every platform image is scanned, has an SBOM, and is signed; unsigned imag
   - 11/15: `scripts/cosign-keygen.sh` (cosign v3.1.3, ECDSA P-256). Private key at `~/.config/platform-lab/cosign.key` (0600, outside the repo; back it up with `vault-pass`); its random password in Vault as `vault_cosign_password`; public key committed at `pki/cosign.pub` next to the lab CA. Refuses to overwrite an existing key.
   - Round trip checked: sign-blob with the Vault password, verify with `pki/cosign.pub`; a modified file fails verification.
   - cosign v3 needs `--use-signing-config=false --tlog-upload=false` to sign without the public Rekor log (the airgap target can't reach it); verification then needs `--insecure-ignore-tlog`. The Kyverno policy must skip Rekor too (`rekor.ignoreTlog`).
-- [ ] Sign images and attach SBOM attestations with cosign
+- [x] Sign images and attach SBOM attestations with cosign
+  - 11/15: last step of `make image` (`SIGN=0` skips): `cosign sign` on the index digest and `cosign attest --type spdxjson` with the Syft SPDX SBOM, then `verify` and `verify-attestation` against `pki/cosign.pub`. No Rekor (`--use-signing-config=false --tlog-upload=false`; verify with `--insecure-ignore-tlog`).
+  - Storage format: cosign v3 defaults to an OCI 1.1 referrer holding a Sigstore bundle. The script uses `--new-bundle-format=false` (sign and verify) for the tag-based `sha256-<digest>.sig` / `.att` layout, which Kyverno and Zarf have supported longest. To confirm with the Kyverno policy test and the Zarf transfer (Week 6).
+  - Idempotent: skips signing when a valid signature and SBOM attestation already exist. Without that, every run added another `.att` layer (each SBOM has a fresh timestamp and ID); signatures did not stack.
+  - Tested: `alpine:3.22` (17 packages) and `busybox:1.37.0` (2 packages) signed and attested; the attestation subject is the index digest; verification with a different public key fails ("invalid signature").
 - [ ] Optional: GitHub Actions workflow for the connected build path (scan + SBOM on push)
 - [ ] Kyverno installed via Argo CD
 - [ ] Kyverno `verifyImages` policy using the cosign public key
