@@ -7,3 +7,4 @@
     - hardening
     - openscap
     - rke2
+    - registry_auth

@@ -1,0 +1,9 @@
+---
+# htpasswd Secret for the Zot registry (gitops/apps/zot.yaml mounts it).
+# Created here because its content comes from Ansible Vault.
+registry_auth_namespace: zot
+registry_auth_secret: zot-htpasswd
+registry_auth_htpasswd: "{{ vault_zot_htpasswd }}"
+
+registry_auth_kubectl: >-
+  /var/lib/rancher/rke2/bin/kubectl --kubeconfig /etc/rancher/rke2/rke2.yaml

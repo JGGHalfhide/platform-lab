@@ -1,0 +1,111 @@
+# Zot OCI registry (in-cluster, build cluster).
+# - Pulls: anonymous read. The node's containerd pulls via the NodePort on
+#   127.0.0.1:30500 (plain HTTP to localhost, the same pattern Zarf uses).
+# - Pushes: user "admin" over the Traefik ingress (TLS). The htpasswd Secret
+#   comes from Ansible Vault (ansible/roles/registry_auth), not from Git.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: zot
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://zotregistry.dev/helm-charts
+    chart: zot
+    targetRevision: 0.1.134
+    helm:
+      valuesObject:
+        image:
+          tag: v2.1.23
+        service:
+          type: NodePort
+          port: 5000
+          nodePort: 30500
+        ingress:
+          enabled: true
+          className: traefik
+          pathtype: Prefix
+          hosts:
+            - host: registry.platform-lab.internal
+              paths:
+                - path: /
+          tls:
+            - hosts:
+                - registry.platform-lab.internal
+        persistence: true
+        pvc:
+          create: true
+          storage: 10Gi
+          storageClassName: local-path
+        mountConfig: true
+        configFiles:
+          config.json: |-
+            {
+              "distSpecVersion": "1.1.1",
+              "storage": {
+                "rootDirectory": "/var/lib/registry",
+                "gc": true,
+                "dedupe": true
+              },
+              "http": {
+                "address": "0.0.0.0",
+                "port": "5000",
+                "readTimeout": "60s",
+                "writeTimeout": "300s",
+                "auth": {
+                  "htpasswd": { "path": "/secret/htpasswd" }
+                },
+                "accessControl": {
+                  "repositories": {
+                    "**": {
+                      "anonymousPolicy": ["read"],
+                      "defaultPolicy": ["read"]
+                    }
+                  },
+                  "adminPolicy": {
+                    "users": ["admin"],
+                    "actions": ["read", "create", "update", "delete"]
+                  }
+                }
+              },
+              "log": { "level": "info" },
+              "extensions": {
+                "search": { "enable": true },
+                "ui": { "enable": true }
+              }
+            }
+        externalSecrets:
+          - secretName: zot-htpasswd
+            mountPath: /secret
+        extraVolumes:
+          - name: tmp
+            emptyDir: {}
+        extraVolumeMounts:
+          - name: tmp
+            mountPath: /tmp
+        podSecurityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          fsGroup: 1000
+          seccompProfile:
+            type: RuntimeDefault
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 1Gi
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: zot
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
