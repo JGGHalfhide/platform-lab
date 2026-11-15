@@ -90,7 +90,8 @@ Done (11/15): local-path-provisioner (default StorageClass, privileged PSS excep
 for its helper pods) and Zot v2.1.23 via Argo CD (anonymous read, admin push with
 htpasswd from Vault via `registry_auth` role; NodePort 30500, Traefik ingress
 registry.platform-lab.internal).
-Next: push/pull test (needs crane on the build host), then tag v0.3.
+Done (11/15): push/pull test (crane push as admin, restricted pod pulls via 127.0.0.1:30500).
+Next: from-scratch rebuild check, then tag v0.3.
 Post 1 (hardening results) is the user's to write.
 See ROADMAP.md for the checklist.
 Note: in Claude Code sessions run ansible with `</dev/null` (non-blocking IO error otherwise).

@@ -113,7 +113,9 @@ Goal: cluster state is driven from `gitops/`.
   - NodePort 30500 for node pulls via `127.0.0.1:30500` (Zarf's pattern); ingress for pushes and the UI.
 - [x] Ingress using the controller bundled with the installed RKE2 version (v1.36 ships Traefik, `rke2-traefik` in `kube-system`)
   - `registry.platform-lab.internal` on Traefik (host ports 80/443, Traefik's default self-signed cert for now). Traefik never publishes an Ingress address, so `argocd-cm` treats Ingresses as Healthy once they exist.
-- [ ] Push a test image to the registry and pull it from a pod
+- [x] Push a test image to the registry and pull it from a pod
+  - 11/15: `crane copy` of `busybox:1.37.0` and `alpine:3.22` (pinned digests) into Zot as `admin`; digests unchanged; anonymous push rejected (UNAUTHORIZED). A restricted, non-root pod pulled `127.0.0.1:30500/library/alpine:3.22@sha256:...` in 178ms; Zot's log shows containerd (v2.3.4-k3s1) fetching both manifests and both blobs over plain HTTP to localhost, so no `registries.yaml` change is needed.
+  - The push went over the NodePort (HTTP) because the build host cannot resolve `registry.platform-lab.internal`. Week 4's push script should use the TLS ingress: needs name resolution on the build host and a trusted CA instead of Traefik's self-signed default.
 - [ ] Tag `v0.3`
 
 Acceptance: deleting an app's resources causes Argo CD to restore them; a commit to `gitops/` changes the cluster.
