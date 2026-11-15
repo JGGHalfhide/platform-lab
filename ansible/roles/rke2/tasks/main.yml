@@ -95,6 +95,18 @@
 
 # Sysctls must be applied before RKE2 first starts, and config changes picked up
 # before waiting on the node.
+# Host path for local-path-provisioner volumes (gitops/local-path-storage).
+# rke2-selinux labels it container_file_t; creating it here applies that label
+# and keeps the parent root-only (pods reach their own volume via bind mount).
+- name: Create the local-path-provisioner directory
+  ansible.builtin.file:
+    path: /opt/local-path-provisioner
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+    setype: container_file_t
+
 - name: Run pending handlers
   ansible.builtin.meta: flush_handlers
 

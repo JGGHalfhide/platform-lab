@@ -1,0 +1,18 @@
+# Default StorageClass (local-path) for single-node persistent volumes.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: local-path-storage
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/JGGHalfhide/platform-lab.git
+    targetRevision: main
+    path: gitops/local-path-storage
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

@@ -1,0 +1,92 @@
+# local-path-provisioner, pinned upstream manifest plus local patches.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.37/deploy/local-path-storage.yaml
+patches:
+  # Pod Security exemption: the helper pods that create and delete volume
+  # directories mount a hostPath, which both baseline and restricted forbid.
+  # Enforce privileged here only; warn and audit stay at restricted so any
+  # other violation in this namespace is still reported.
+  - target:
+      kind: Namespace
+      name: local-path-storage
+    patch: |-
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: local-path-storage
+        labels:
+          pod-security.kubernetes.io/enforce: privileged
+          pod-security.kubernetes.io/warn: restricted
+          pod-security.kubernetes.io/audit: restricted
+        annotations:
+          platform-lab/pss-exception: "helper pods mount hostPath /opt/local-path-provisioner"
+  - target:
+      kind: StorageClass
+      name: local-path
+    patch: |-
+      apiVersion: storage.k8s.io/v1
+      kind: StorageClass
+      metadata:
+        name: local-path
+        annotations:
+          storageclass.kubernetes.io/is-default-class: "true"
+  # The provisioner only talks to the API server: run it restricted.
+  - target:
+      kind: Deployment
+      name: local-path-provisioner
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: local-path-provisioner
+        namespace: local-path-storage
+      spec:
+        template:
+          spec:
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 65534
+              runAsGroup: 65534
+              seccompProfile:
+                type: RuntimeDefault
+            containers:
+              - name: local-path-provisioner
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  readOnlyRootFilesystem: true
+                  capabilities:
+                    drop: ["ALL"]
+  # Pinned helper image (upstream uses an untagged busybox). Volume
+  # directories get the sticky bit: they must be world-writable for
+  # non-root workloads, and the STIG requires sticky world-writable dirs.
+  - target:
+      kind: ConfigMap
+      name: local-path-config
+    patch: |-
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: local-path-config
+        namespace: local-path-storage
+      data:
+        setup: |-
+          #!/bin/sh
+          set -eu
+          mkdir -m 1777 -p "$VOL_DIR"
+        helperPod.yaml: |-
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: helper-pod
+          spec:
+            priorityClassName: system-node-critical
+            tolerations:
+              - key: node.kubernetes.io/disk-pressure
+                operator: Exists
+                effect: NoSchedule
+            containers:
+            - name: helper-pod
+              image: docker.io/library/busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+              imagePullPolicy: IfNotPresent
