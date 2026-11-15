@@ -3,6 +3,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.37/deploy/local-path-storage.yaml
+  - default-sa.yaml
 patches:
   # Pod Security exemption: the helper pods that create and delete volume
   # directories mount a hostPath, which both baseline and restricted forbid.
@@ -32,6 +33,16 @@ patches:
         name: local-path
         annotations:
           storageclass.kubernetes.io/is-default-class: "true"
+  # CIS 5.1.6: no token automount; the provisioner gets a projected one.
+  - target:
+      kind: ServiceAccount
+      name: local-path-provisioner-service-account
+    patch: |-
+      apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        name: local-path-provisioner-service-account
+      automountServiceAccountToken: false
   # The provisioner only talks to the API server: run it restricted.
   - target:
       kind: Deployment
@@ -58,6 +69,28 @@ patches:
                   readOnlyRootFilesystem: true
                   capabilities:
                     drop: ["ALL"]
+                volumeMounts:
+                  - name: kube-api-access
+                    mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+                    readOnly: true
+            volumes:
+              - name: kube-api-access
+                projected:
+                  defaultMode: 0444
+                  sources:
+                    - serviceAccountToken:
+                        path: token
+                        expirationSeconds: 3607
+                    - configMap:
+                        name: kube-root-ca.crt
+                        items:
+                          - key: ca.crt
+                            path: ca.crt
+                    - downwardAPI:
+                        items:
+                          - path: namespace
+                            fieldRef:
+                              fieldPath: metadata.namespace
   # Pinned helper image (upstream uses an untagged busybox). Volume
   # directories get the sticky bit: they must be world-writable for
   # non-root workloads, and the STIG requires sticky world-writable dirs.

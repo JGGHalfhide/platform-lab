@@ -1,0 +1,7 @@
+# CIS 5.1.5: the namespace's default ServiceAccount must not automount tokens.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: local-path-storage
+  name: default
+automountServiceAccountToken: false

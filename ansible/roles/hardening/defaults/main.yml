@@ -56,6 +56,7 @@ hardening_exceptions:
     Only kubelet pod volumes and container image layers match; Kubernetes
     manages those paths.
   file_permissions_ungroupowned: *kubelet
+  no_files_unowned_by_user: *kubelet
 
 # FIPS mode plus the STIG SSH sub-policy (STIG profile value: FIPS:STIG).
 hardening_crypto_policy: FIPS:STIG

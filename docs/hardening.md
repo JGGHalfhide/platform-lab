@@ -91,6 +91,7 @@ skipped.
 | `postfix_client_configure_mail_alias` | medium | The check expects root's alias to be the profile's placeholder value (change_me@localhost). Root's mail goes to the admin user instead. |
 | `dir_perms_world_writable_sticky_bits` | medium | Only kubelet pod volumes and container image layers match; Kubernetes manages those paths. |
 | `file_permissions_ungroupowned` | medium | Only kubelet pod volumes and container image layers match; Kubernetes manages those paths. |
+| `no_files_unowned_by_user` | medium | Only kubelet pod volumes and container image layers match; Kubernetes manages those paths. Files there are owned by container image UIDs (for example 1001, 42, 65532) that have no host account. Appeared in Week 3 once Argo CD and Zot images were on the node. |
 
 ## Operational notes
 

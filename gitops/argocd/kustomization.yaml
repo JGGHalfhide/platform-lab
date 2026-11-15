@@ -5,8 +5,27 @@ kind: Kustomization
 namespace: argocd
 resources:
   - namespace.yaml
+  - default-sa.yaml
   - https://raw.githubusercontent.com/argoproj/argo-cd/v3.6.1/manifests/install.yaml
 patches:
+  # CIS 5.1.6: no ServiceAccount automounts a token. Workloads that call the
+  # API get an explicitly projected token instead (patches/token-*.yaml);
+  # argocd-repo-server needs none, and argocd-redis needs one only in its
+  # secret-init init container.
+  - target:
+      kind: ServiceAccount
+    patch: |-
+      apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        name: any
+      automountServiceAccountToken: false
+  - path: patches/token-argocd-application-controller.yaml
+  - path: patches/token-argocd-applicationset-controller.yaml
+  - path: patches/token-argocd-dex-server.yaml
+  - path: patches/token-argocd-notifications-controller.yaml
+  - path: patches/token-argocd-redis.yaml
+  - path: patches/token-argocd-server.yaml
   # RKE2's Traefik listens on host ports behind a ClusterIP Service, so it
   # never publishes a load-balancer address in Ingress status. Argo CD's
   # default Ingress check waits for one and stays Progressing; treat an

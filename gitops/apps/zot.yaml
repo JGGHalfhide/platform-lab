@@ -18,6 +18,22 @@ spec:
       valuesObject:
         image:
           tag: v2.1.23
+        # CIS 5.1.5/5.1.6: Zot never calls the Kubernetes API, so neither
+        # its ServiceAccount nor the namespace default one mounts a token.
+        serviceAccount:
+          create: false
+          name: zot
+        extraObjects:
+          - apiVersion: v1
+            kind: ServiceAccount
+            metadata:
+              name: zot
+            automountServiceAccountToken: false
+          - apiVersion: v1
+            kind: ServiceAccount
+            metadata:
+              name: default
+            automountServiceAccountToken: false
         service:
           type: NodePort
           port: 5000
