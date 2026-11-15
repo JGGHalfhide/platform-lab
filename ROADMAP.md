@@ -150,6 +150,7 @@ Goal: every platform image is scanned, has an SBOM, and is signed; unsigned imag
   - Idempotent: skips signing when a valid signature and SBOM attestation already exist. Without that, every run added another `.att` layer (each SBOM has a fresh timestamp and ID); signatures did not stack.
   - Tested: `alpine:3.22` (17 packages) and `busybox:1.37.0` (2 packages) signed and attested; the attestation subject is the index digest; verification with a different public key fails ("invalid signature").
 - [ ] Optional: GitHub Actions workflow for the connected build path (scan + SBOM on push)
+  - Deferred 11/15 (user's call); must be revisited, not dropped. Tracked again in Week 8 ("Circle back").
 - [ ] Kyverno installed via Argo CD
 - [ ] Kyverno `verifyImages` policy using the cosign public key
 - [ ] Test: signed image admitted, unsigned image rejected (record both outputs in `docs/`)
@@ -235,6 +236,11 @@ Goal: a repo a stranger can read and reproduce.
 - [ ] LICENSE (MIT or Apache-2.0)
 - [ ] Confirm no employer-derived names, configs, or hostnames anywhere in the repo
 - [ ] CI: terraform fmt/validate, ansible-lint, yamllint on pull requests
+- [ ] Circle back: GitHub Actions supply-chain workflow deferred from Week 4 (scan + SBOM on push for the connected build path; can share the CI workflow above)
+- [ ] Remind the user: full project spec in `docs/stack.md`, covering
+  - Tech stack: every tool and component (host, provisioning, OS, Kubernetes, GitOps, registry, supply chain, policy, compliance, airgap, observability, recovery), with its version, what it does in this project, and why it was chosen over the alternatives (link the ADRs)
+  - Workflow: the full end-to-end breakdown, from `make host` / `make up` through hardening, GitOps, image publishing (pull, SBOM, scan gate, push, sign, attest), policy admission, Zarf packaging and the airgapped deploy, to monitoring and restore
+  - Diagram: a Mermaid source the user can render or redraw themselves
 - [ ] Tag `v1.0`; publish Post 4 (architecture and lessons)
 
 Acceptance: a fresh clone plus the README quickstart reproduces the build cluster.
@@ -242,7 +248,7 @@ Acceptance: a fresh clone plus the README quickstart reproduces the build cluste
 Claude Code prompt:
 
 ```
-Week 8 in ROADMAP.md. Write the README with a Mermaid architecture diagram and a results table pulled from docs/. Generate ADRs for the main platform choices. Run gitleaks over the full git history and report findings. Add a CI workflow for fmt/validate/lint. Then do a final pass to confirm nothing in the repo references any employer system.
+Week 8 in ROADMAP.md. Write the README with a Mermaid architecture diagram and a results table pulled from docs/. Generate ADRs for the main platform choices. Run gitleaks over the full git history and report findings. Add a CI workflow for fmt/validate/lint, and circle back to the deferred Week 4 GitHub Actions supply-chain workflow. Write docs/stack.md (every tool, its use and why; the end-to-end workflow; a Mermaid diagram), and remind me about it. Then do a final pass to confirm nothing in the repo references any employer system.
 ```
 
 ---
