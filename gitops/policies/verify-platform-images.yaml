@@ -1,0 +1,83 @@
+# Images from the in-cluster registry must be pinned by digest and carry a
+# valid cosign signature from the lab key (pki/cosign.pub), made by
+# `make image`. Week 4 scope: images pulled through the registry's NodePort
+# (127.0.0.1:30500/*). Images from other registries are not matched yet; the
+# Week 5 "trusted registries only" policy closes that gap.
+#
+# - Pods pull via 127.0.0.1:30500 (the node's localhost), which Kyverno cannot
+#   reach from its own pod, and Kyverno prefetches every image matched by
+#   matchImageReferences from the reference as written. So the policy does
+#   not match the pod's references directly. The `platform` image extractor
+#   lists each 127.0.0.1:30500/<repo>@<digest> again as
+#   zot.zot.svc.cluster.local:5000/<repo>@<digest> (same registry, reached
+#   through its Service; plain HTTP inside the cluster), and only that form
+#   is matched and verified. The image is pinned by digest and the signature
+#   is checked against the key, so the transport does not need to be trusted.
+#   The same approach should cover Zarf's 127.0.0.1:31999 in Week 6.
+# - Digest pinning is checked explicitly (first validation); mutateDigest and
+#   verifyDigest are off because they act on the pod's own references.
+# - No transparency log: signatures are made without Rekor (airgap).
+# - The SBOM attestation is verified by `make image` at publish time but not
+#   here yet: Kyverno 1.19/1.20 fail every tag-based attestation when the
+#   transparency log is ignored (kyverno/kyverno#17109; the signature path
+#   handles it). Add a verifyAttestationSignatures validation for
+#   https://spdx.dev/Document once that is fixed (ROADMAP open questions).
+apiVersion: policies.kyverno.io/v1
+kind: ImageValidatingPolicy
+metadata:
+  name: verify-platform-images
+  annotations:
+    policies.kyverno.io/title: Verify signatures of platform images
+    policies.kyverno.io/description: >-
+      Images from the in-cluster registry must be pinned by digest and signed
+      with the platform-lab cosign key.
+spec:
+  validationActions: [Deny]
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  # Container images from the registry NodePort, rewritten to the address
+  # Kyverno can reach. Runs alongside the default extractors.
+  images:
+    - name: platform
+      expression: >-
+        (object.spec.containers
+        + (has(object.spec.initContainers) ? object.spec.initContainers : [])
+        + (has(object.spec.ephemeralContainers) ? object.spec.ephemeralContainers : []))
+        .map(c, c.image)
+        .filter(i, i.startsWith('127.0.0.1:30500/'))
+        .map(i, 'zot.zot.svc.cluster.local:5000/' + i.substring(16))
+  matchImageReferences:
+    - glob: "zot.zot.svc.cluster.local:5000/*"
+  validationConfigurations:
+    mutateDigest: false
+    verifyDigest: false
+    required: false
+  credentials:
+    allowInsecureRegistry: true
+  attestors:
+    - name: platformLab
+      cosign:
+        key:
+          data: |
+            -----BEGIN PUBLIC KEY-----
+            MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEjpx55Fs7EeVfS+if9C7w124VF8IH
+            5VaX/scWoSaIKBFz/0B++SEOPg4+i0zZvSG+HAZKNQN4kjfz9fq3cZYIig==
+            -----END PUBLIC KEY-----
+        ctlog:
+          insecureIgnoreTlog: true
+          insecureIgnoreSCT: true
+  validations:
+    - expression: images.platform.all(i, i.contains('@sha256:'))
+      message: >-
+        images from the platform registry must be pinned by digest
+        (127.0.0.1:30500/<repo>@sha256:...)
+    - expression: >-
+        images.platform.all(i, verifyImageSignatures(i, [attestors.platformLab]) > 0)
+      message: >-
+        image is not signed with the platform-lab cosign key (pki/cosign.pub);
+        publish it with `make image`
