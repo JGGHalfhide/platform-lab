@@ -7,7 +7,8 @@ internet to a second cluster. 8-week build, about 7-10 hours per week.
 ## Hardware
 - Build host: GMKtec K8 Plus (Ryzen 7 8845HS, 32GB RAM), Arch Linux,
   libvirt/QEMU/KVM at qemu:///system. Hosts the build cluster VMs.
-- Disconnected target: old iMac (8GB RAM), Fedora. Single-node RKE2, small workloads only.
+- Disconnected target: old iMac (8GB RAM), Rocky Linux 9 (decided 11/14; was Fedora).
+  Single-node RKE2, small workloads only. Same base/hardening/rke2 roles and STIG scan as the build cluster.
 - Optional arm64 node: Raspberry Pi 4, Fedora.
 - Dev machine: MacBook Air M2.
 

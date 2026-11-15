@@ -103,4 +103,4 @@ Makefile     up / down / verify / bench / stig-scan
 ## Hardware
 
 - Build host: mini PC, Ryzen 7 8845HS, 32 GB RAM, Arch Linux
-- Disconnected target: older iMac, 8 GB RAM
+- Disconnected target: older iMac, 8 GB RAM, Rocky Linux 9

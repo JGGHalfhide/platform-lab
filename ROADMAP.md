@@ -160,7 +160,7 @@ Week 5 in ROADMAP.md. Write the Kyverno policy set under gitops/policies/ with k
 
 Goal: the same platform runs on the iMac cluster with no internet access.
 
-- [ ] iMac: Fedora prepared, hardening role applied (adjust inventory), single-node RKE2 installed from airgap artifacts (RKE2 images tarball + install script staged over scp)
+- [ ] iMac: Rocky Linux 9 installed, base and hardening roles applied (adjust inventory), single-node RKE2 installed from airgap artifacts (RKE2 images tarball + install script staged over scp)
 - [ ] Zarf installed on the build host (`zarf version` recorded)
 - [ ] Zarf package definitions under `zarf/` for: platform components, Kyverno policies, sample app
 - [ ] `zarf package create` on the connected host; transfer the package file to the iMac via scp/USB
@@ -226,7 +226,7 @@ Week 8 in ROADMAP.md. Write the README with a Mermaid architecture diagram and a
 Decide these before the week that depends on them.
 
 - **Firewall vs. Canal (Week 1). Decided 10/13: (a).** Options: (a) keep firewalld on with RKE2 ports open and the CNI interfaces and pod/service CIDRs in the `trusted` zone, verified with pod-to-pod and DNS tests; or (b) disable firewalld per RKE2 docs and record a STIG exception with an ADR. (a) keeps the STIG control and is the more useful result if it holds up under testing.
-- **iMac OS (Week 6).** Fedora has no STIG profile in scap-security-guide (CIS, OSPP, PCI-DSS and others only), and rke2-selinux packages target EL. Running Rocky 9 on the iMac too would let the same hardening role and STIG scan apply to both clusters.
+- **iMac OS (Week 6). Decided 11/14: Rocky Linux 9.** Fedora has no STIG profile in scap-security-guide (CIS, OSPP, PCI-DSS and others only), and rke2-selinux packages target EL. Rocky 9 on the iMac lets the same base, hardening and RKE2 roles and the STIG scan apply to both clusters. Install from the Rocky 9 minimal/DVD ISO on bare metal (no cloud-init); the RKE2 airgap install still applies.
 - **iMac memory (Week 6-7).** 8 GB is tight for RKE2 plus Argo CD, Kyverno, a registry, Prometheus and Loki. Expect to trim (for example, no Argo CD on the target, since Zarf deploys) or set small resource limits.
 - **Zarf and Kyverno image verification (Week 6).** Zarf rewrites image references to its own in-cluster registry. Test early that the `verifyImages` policy still admits signed images after the rewrite.
 
