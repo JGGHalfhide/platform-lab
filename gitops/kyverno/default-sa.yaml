@@ -1,0 +1,9 @@
+# CIS 5.1.5: the namespace's default ServiceAccount must not automount tokens.
+# The chart has no hook for extra objects, so this comes from a second source
+# of the kyverno Application (gitops/apps/kyverno.yaml).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: kyverno
+  name: default
+automountServiceAccountToken: false

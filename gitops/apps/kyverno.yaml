@@ -1,0 +1,69 @@
+# Kyverno policy engine (admission, background, cleanup, reports controllers).
+# v1.19.2 (chart 3.9.2): latest patch of the previous minor; 1.20.0 was days
+# old when installed.
+# - Runs under the cluster-wide restricted Pod Security level, no exemption.
+# - CIS 5.1.5/5.1.6: no automounted tokens anywhere; the chart mounts
+#   projected, time-limited tokens for the controllers that call the API.
+# - The post-upgrade migration hook creates a wildcard ClusterRole
+#   (kyverno:migrate-resources) only while it runs; Helm hook delete policies
+#   remove it afterwards, so it does not persist for kube-bench 5.1.3.
+# - Policies live in gitops/policies/ (their own Application).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kyverno
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://kyverno.github.io/kyverno
+      chart: kyverno
+      targetRevision: 3.9.2
+      helm:
+        valuesObject:
+          crds:
+            migration:
+              serviceAccount:
+                automountServiceAccountToken: false
+          webhooksCleanup:
+            serviceAccount:
+              automountServiceAccountToken: false
+          # Helm test pods; pinned so nothing pulls :latest (airgap).
+          test:
+            automountServiceAccountToken: false
+            image:
+              tag: v1.19.2
+          admissionController:
+            replicas: 1
+            rbac:
+              serviceAccount:
+                automountServiceAccountToken: false
+          backgroundController:
+            replicas: 1
+            rbac:
+              serviceAccount:
+                automountServiceAccountToken: false
+          cleanupController:
+            replicas: 1
+            rbac:
+              serviceAccount:
+                automountServiceAccountToken: false
+          reportsController:
+            replicas: 1
+            rbac:
+              serviceAccount:
+                automountServiceAccountToken: false
+    - repoURL: https://github.com/JGGHalfhide/platform-lab.git
+      targetRevision: main
+      path: gitops/kyverno
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kyverno
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # Kyverno's CRDs exceed the client-side apply annotation size limit.
+      - ServerSideApply=true
