@@ -109,8 +109,11 @@ Done (11/15): `make image` signs the index digest and attaches the SPDX SBOM as 
 attestation (tag-based .sig/.att via --new-bundle-format=false; skipped when already valid).
 Done (11/15): Kyverno v1.19.2 (chart 3.9.2) via Argo CD, restricted PSS, no token
 automount; CRD migration hook disabled (it broke kube-bench 5.1.6). kube-bench 80/1.
-Next: Kyverno verifyImages policy with pki/cosign.pub (ignoreTlog, tag-based signatures).
-GitHub Actions item deferred to Week 8.
+Done (11/15): ImageValidatingPolicy verify-platform-images (digest + signature for
+127.0.0.1:30500/* images, verified via zot.zot.svc:5000 through a custom image extractor);
+signed admitted, unsigned rejected (docs/supply-chain.md). SBOM attestation not checked at
+admission (Kyverno bug #17109; tracked in ROADMAP open questions).
+Next: Week 4 rebuild acceptance, then tag v0.4. GitHub Actions item deferred to Week 8.
 Reminders for Week 8 (in ROADMAP.md): circle back to the deferred Week 4 GitHub Actions
 workflow; remind the user about docs/stack.md (full tech stack spec with each tool's use
 and rationale, end-to-end workflow breakdown, Mermaid diagram).

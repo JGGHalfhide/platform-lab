@@ -155,8 +155,12 @@ Goal: every platform image is scanned, has an SBOM, and is signed; unsigned imag
   - 11/15: Kyverno v1.19.2, chart 3.9.2 (`gitops/apps/kyverno.yaml`; 1.20.0 was 3 days old, so the latest patch of 1.19). Multi-source Application: the chart plus `gitops/kyverno/` for the namespace `default` ServiceAccount. ServerSideApply (large CRDs). Single replica per controller. Restricted Pod Security, no exemption; no automounted tokens (projected tokens for the controllers). Rendered and audited first via `helm template` in the Argo CD repo-server (no Helm on the host).
   - kube-bench after install: 5.1.6 FAIL from the chart's CRD migration hook (finished pod kept, its ServiceAccount deleted). Migration disabled (in-place upgrades only); back to 80 pass / 1 fail (the Argo CD 5.1.3 exception). `docs/kube-bench.md`, `docs/scans/week4-kyverno-kube-bench.txt`.
   - Helm test hook pods did not run under Argo CD; their image is pinned to v1.19.2 anyway.
-- [ ] Kyverno `verifyImages` policy using the cosign public key
-- [ ] Test: signed image admitted, unsigned image rejected (record both outputs in `docs/`)
+- [x] Kyverno `verifyImages` policy using the cosign public key
+  - 11/15: `ImageValidatingPolicy` `verify-platform-images` (`gitops/policies/`, Argo CD app `policies`; `ClusterPolicy` is deprecated in 1.19). Images from `127.0.0.1:30500/*` must be pinned by digest and signed with `pki/cosign.pub`; no Rekor (`insecureIgnoreTlog`).
+  - Kyverno prefetches every matched image from the reference as written and cannot reach the node's `127.0.0.1:30500`. A custom image extractor relists each image as `zot.zot.svc.cluster.local:5000/<repo>@<digest>` and only that form is matched and verified (found in the 1.19 source). Should carry over to Zarf's `127.0.0.1:31999` in Week 6.
+  - SBOM attestation check left out: Kyverno bug kyverno/kyverno#17109 (attestations fail with `insecureIgnoreTlog`; open, not fixed in 1.20). See Open questions.
+- [x] Test: signed image admitted, unsigned image rejected (record both outputs in `docs/`)
+  - 11/15: signed pod admitted and ran; unsigned pod, tag-only reference and an unsigned Deployment rejected with the policy message. `docs/supply-chain.md`, `docs/scans/week4-admission-test.txt`.
 - [ ] Tag `v0.4`; publish Post 2 (supply chain)
 
 Acceptance: an unsigned image deployment fails admission with a clear policy message.
@@ -263,6 +267,7 @@ Decide these before the week that depends on them.
 - **Firewall vs. Canal (Week 1). Decided 10/13: (a).** Options: (a) keep firewalld on with RKE2 ports open and the CNI interfaces and pod/service CIDRs in the `trusted` zone, verified with pod-to-pod and DNS tests; or (b) disable firewalld per RKE2 docs and record a STIG exception with an ADR. (a) keeps the STIG control and is the more useful result if it holds up under testing.
 - **iMac OS (Week 6). Decided 11/14: Rocky Linux 9.** Fedora has no STIG profile in scap-security-guide (CIS, OSPP, PCI-DSS and others only), and rke2-selinux packages target EL. Rocky 9 on the iMac lets the same base, hardening and RKE2 roles and the STIG scan apply to both clusters. Install from the Rocky 9 minimal/DVD ISO on bare metal (no cloud-init); the RKE2 airgap install still applies.
 - **iMac memory (Week 6-7).** 8 GB is tight for RKE2 plus Argo CD, Kyverno, a registry, Prometheus and Loki. Expect to trim (for example, no Argo CD on the target, since Zarf deploys) or set small resource limits.
+- **SBOM attestation at admission (open, upstream).** Kyverno 1.19/1.20 reject every tag-based cosign attestation when the transparency log is ignored (kyverno/kyverno#17109). Admission checks signatures only; `make image` verifies the SBOM attestation at publish time. When a fixed Kyverno ships, add a `verifyAttestationSignatures` validation for `https://spdx.dev/Document` to `gitops/policies/verify-platform-images.yaml`.
 - **Zarf and Kyverno image verification (Week 6).** Zarf rewrites image references to its own in-cluster registry. Test early that the `verifyImages` policy still admits signed images after the rewrite.
 
 ---

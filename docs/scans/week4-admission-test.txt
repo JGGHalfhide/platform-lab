@@ -1,0 +1,20 @@
+# Admission test, 2026-11-15T18:31Z, Kyverno v1.19.2, policy verify-platform-images
+
+## 1. Signed image (make image): admitted and runs
+$ kubectl apply -f signed-pod.yaml   # image: 127.0.0.1:30500/library/alpine:3.22@sha256:49340b346798875b5592e5d420241f2f9cfba5f47e62ebb1446a1b34734e898f
+pod/signed created
+pod/signed condition met
+$ kubectl -n supply-chain-test logs signed
+ok
+
+## 2. Unsigned image (pushed with SIGN=0): rejected
+$ kubectl apply -f unsigned-pod.yaml   # image: 127.0.0.1:30500/library/busybox:1.36.1@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
+Error from server: error when creating "STDIN": admission webhook "ivpol.validate.kyverno.svc-fail" denied the request: Policy verify-platform-images failed: image is not signed with the platform-lab cosign key (pki/cosign.pub); publish it with `make image`
+
+## 3. Signed image referenced by tag only: rejected
+$ kubectl apply -f tag-pod.yaml   # image: 127.0.0.1:30500/library/alpine:3.22
+Error from server: error when creating "STDIN": admission webhook "ivpol.validate.kyverno.svc-fail" denied the request: Policy verify-platform-images failed: images from the platform registry must be pinned by digest (127.0.0.1:30500/<repo>@sha256:...)
+
+## 4. Deployment with the unsigned image: rejected at the Deployment (autogen)
+$ kubectl apply -f unsigned-deployment.yaml
+Error from server: error when creating "STDIN": admission webhook "ivpol.validate.kyverno.svc-fail" denied the request: Policy verify-platform-images failed: image is not signed with the platform-lab cosign key (pki/cosign.pub); publish it with `make image`
