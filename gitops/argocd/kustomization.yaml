@@ -1,0 +1,8 @@
+# Argo CD, pinned upstream manifests. Applied once by `make argocd`, then
+# Argo CD manages itself from this path (gitops/apps/argocd.yaml).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: argocd
+resources:
+  - namespace.yaml
+  - https://raw.githubusercontent.com/argoproj/argo-cd/v3.6.1/manifests/install.yaml

@@ -1,4 +1,4 @@
-.PHONY: host up inventory down verify bench stig-scan
+.PHONY: host up inventory down verify argocd bench stig-scan
 
 host:
 	./scripts/host-bootstrap.sh
@@ -7,6 +7,7 @@ up: host
 	cd terraform && terraform init && terraform apply -auto-approve
 	$(MAKE) inventory
 	cd ansible && ansible-galaxy collection install -r requirements.yml && ansible-playbook site.yml
+	$(MAKE) argocd
 
 # Regenerate the Ansible inventory from Terraform output.
 inventory:
@@ -20,6 +21,14 @@ down:
 
 verify:
 	kubectl --kubeconfig kubeconfig get nodes -o wide
+
+# Install Argo CD (pinned in gitops/argocd) and the app-of-apps root.
+# Idempotent; after this, Argo CD manages itself and everything in gitops/apps/.
+argocd:
+	kubectl --kubeconfig kubeconfig apply --server-side --force-conflicts -k gitops/argocd
+	kubectl --kubeconfig kubeconfig -n argocd rollout status deploy/argocd-server --timeout=300s
+	kubectl --kubeconfig kubeconfig -n argocd rollout status deploy/argocd-repo-server --timeout=300s
+	kubectl --kubeconfig kubeconfig apply --server-side -f gitops/root.yaml
 
 # kube-bench (RKE2 CIS 1.9) as a one-shot Job; OUT sets the report path.
 bench:
