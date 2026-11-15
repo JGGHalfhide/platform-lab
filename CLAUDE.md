@@ -102,7 +102,10 @@ registry-tls Secret via `registry_auth`; node pinned to 192.168.122.10 (fixed MA
 DHCP reservation), /etc/hosts entry from host-bootstrap. Rebuild 8m00s.
 Done (11/15): `make image IMAGE=<ref>`: pull (all platforms), Syft SBOMs, Trivy scan +
 gate (fixable CRITICAL), push over TLS with upstream digest preserved; build/ gitignored.
-Next: cosign key pair, then signing and SBOM attestations.
+Done (11/15): cosign key pair (`scripts/cosign-keygen.sh`): private key
+~/.config/platform-lab/cosign.key, password in Vault (vault_cosign_password),
+public key pki/cosign.pub. No Rekor: sign with --use-signing-config=false --tlog-upload=false.
+Next: sign images and attach SBOM attestations.
 Post 1 (hardening results) is the user's to write.
 See ROADMAP.md for the checklist.
 Note: in Claude Code sessions run ansible with `</dev/null` (non-blocking IO error otherwise).

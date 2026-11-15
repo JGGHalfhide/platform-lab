@@ -140,7 +140,10 @@ Goal: every platform image is scanned, has an SBOM, and is signed; unsigned imag
   - The digest check caught a bug in the first version: `crane push --index` wrapped the upstream index in a new one (different digest). Plain `crane push` of the single-entry layout keeps it.
   - Week 3 open item closed (TLS push path): lab CA (`scripts/lab-pki.sh`, ECDSA P-384, keys in Vault, CA cert in `pki/lab-ca.crt`); `registry_auth` creates the `registry-tls` Secret for the Zot ingress. Terraform pins the node MAC and `host-bootstrap.sh` reserves 192.168.122.10 for it and adds the `/etc/hosts` entry (passwordless sudo, once). Scripts trust the CA via `SSL_CERT_FILE` and log in with a throwaway `DOCKER_CONFIG` (`scripts/lib.sh`); nothing is installed system-wide.
   - Rebuild 11/15: `make down` 1s, `make up` 8m00s, node at 192.168.122.10, all apps Synced/Healthy, second Ansible run `changed=0`.
-- [ ] cosign key pair generated locally (private key never committed; public key committed under `gitops/` or `docs/`)
+- [x] cosign key pair generated locally (private key never committed; public key committed under `gitops/` or `docs/`)
+  - 11/15: `scripts/cosign-keygen.sh` (cosign v3.1.3, ECDSA P-256). Private key at `~/.config/platform-lab/cosign.key` (0600, outside the repo; back it up with `vault-pass`); its random password in Vault as `vault_cosign_password`; public key committed at `pki/cosign.pub` next to the lab CA. Refuses to overwrite an existing key.
+  - Round trip checked: sign-blob with the Vault password, verify with `pki/cosign.pub`; a modified file fails verification.
+  - cosign v3 needs `--use-signing-config=false --tlog-upload=false` to sign without the public Rekor log (the airgap target can't reach it); verification then needs `--insecure-ignore-tlog`. The Kyverno policy must skip Rekor too (`rekor.ignoreTlog`).
 - [ ] Sign images and attach SBOM attestations with cosign
 - [ ] Optional: GitHub Actions workflow for the connected build path (scan + SBOM on push)
 - [ ] Kyverno installed via Argo CD
