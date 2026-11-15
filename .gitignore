@@ -16,3 +16,5 @@ ansible/.known_hosts
 # Raw OpenSCAP reports; the .gz copies are committed.
 docs/scans/*.html
 docs/scans/*.xml
+# Supply-chain work dir (OCI layouts, SBOMs, scan reports).
+build/

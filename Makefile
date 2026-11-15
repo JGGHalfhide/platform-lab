@@ -1,4 +1,4 @@
-.PHONY: host up inventory down verify argocd bench stig-scan
+.PHONY: host up inventory down verify argocd bench stig-scan image
 
 # Node NIC and its reserved DHCP address (host-bootstrap reserves the address,
 # Terraform sets the MAC). registry.platform-lab.internal resolves to NODE_IP.
@@ -49,3 +49,9 @@ stig-scan:
 	gzip -9 -k -f docs/scans/$(NAME).html docs/scans/$(NAME).xml
 	@echo "Rule results for $(NAME):"
 	@grep -o '<result>[a-z]*</result>' docs/scans/$(NAME).xml | sed 's/<[^>]*>//g' | sort | uniq -c
+
+# Pull IMAGE, SBOM (Syft), scan and gate (Trivy), push to the in-cluster
+# registry over TLS. Outputs in build/images/; see scripts/publish-image.sh.
+image:
+	@test -n "$(IMAGE)" || { echo "usage: make image IMAGE=<ref>"; exit 1; }
+	./scripts/publish-image.sh $(IMAGE)

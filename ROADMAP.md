@@ -134,7 +134,12 @@ Week 3 in ROADMAP.md. Install Argo CD, create the app-of-apps layout under gitop
 
 Goal: every platform image is scanned, has an SBOM, and is signed; unsigned images are rejected.
 
-- [ ] Script/Makefile target: pull image, generate SBOM (Syft), scan (Trivy), push to in-cluster registry
+- [x] Script/Makefile target: pull image, generate SBOM (Syft), scan (Trivy), push to in-cluster registry
+  - `make image IMAGE=<ref>` (`scripts/publish-image.sh`): resolves to a digest, pulls the whole index (all platforms) as an OCI layout, Syft SPDX + CycloneDX SBOMs and a Trivy JSON/table report for `linux/amd64`, then the gate: fail on any CRITICAL with a fix available (`GATE_SEVERITY`; exceptions in `.trivyignore`). Pushes to `registry.platform-lab.internal/<repo>:<tag>` and checks the pushed digest equals upstream. Outputs in `build/images/` (gitignored).
+  - 11/15: `alpine:3.22` and `busybox:1.37.0` pass (0 fixable CRITICAL) and push with upstream digests; `nginx:1.25.0` is blocked (7 fixable CRITICAL). A restricted pod pulled the pushed alpine digest via `127.0.0.1:30500`.
+  - The digest check caught a bug in the first version: `crane push --index` wrapped the upstream index in a new one (different digest). Plain `crane push` of the single-entry layout keeps it.
+  - Week 3 open item closed (TLS push path): lab CA (`scripts/lab-pki.sh`, ECDSA P-384, keys in Vault, CA cert in `pki/lab-ca.crt`); `registry_auth` creates the `registry-tls` Secret for the Zot ingress. Terraform pins the node MAC and `host-bootstrap.sh` reserves 192.168.122.10 for it and adds the `/etc/hosts` entry (passwordless sudo, once). Scripts trust the CA via `SSL_CERT_FILE` and log in with a throwaway `DOCKER_CONFIG` (`scripts/lib.sh`); nothing is installed system-wide.
+  - Rebuild 11/15: `make down` 1s, `make up` 8m00s, node at 192.168.122.10, all apps Synced/Healthy, second Ansible run `changed=0`.
 - [ ] cosign key pair generated locally (private key never committed; public key committed under `gitops/` or `docs/`)
 - [ ] Sign images and attach SBOM attestations with cosign
 - [ ] Optional: GitHub Actions workflow for the connected build path (scan + SBOM on push)

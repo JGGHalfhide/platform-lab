@@ -38,6 +38,7 @@ internet to a second cluster. 8-week build, about 7-10 hours per week.
 - make verify: kubectl get nodes against ./kubeconfig
 - make bench OUT=docs/scans/<name>.txt: kube-bench Job, report saved, Job removed
 - make stig-scan NAME=<name>: OpenSCAP STIG scan, reports to docs/scans/<name>.*
+- make image IMAGE=<ref>: SBOM, scan gate, push to registry.platform-lab.internal
 
 ## Conventions
 - Everything is reproducible from the repo: no manual steps on VMs.
@@ -95,8 +96,13 @@ Done (11/15): rebuild 8m12s; kube-bench 80 pass / 1 fail (5.1.3 Argo CD wildcard
 RBAC, documented in docs/kube-bench.md; 5.1.5/5.1.6 fixed with projected tokens);
 STIG 398/29 (new exception no_files_unowned_by_user); Zot runs as UID 65532.
 Week 3 tagged v0.3.
-Next: Week 4 (supply chain). Open item from Week 3: push over the TLS ingress needs
-name resolution and a trusted CA on the build host.
+Week 4 (supply chain):
+Done (11/15): TLS push path: lab CA (`scripts/lab-pki.sh`, keys in Vault, pki/lab-ca.crt),
+registry-tls Secret via `registry_auth`; node pinned to 192.168.122.10 (fixed MAC +
+DHCP reservation), /etc/hosts entry from host-bootstrap. Rebuild 8m00s.
+Done (11/15): `make image IMAGE=<ref>`: pull (all platforms), Syft SBOMs, Trivy scan +
+gate (fixable CRITICAL), push over TLS with upstream digest preserved; build/ gitignored.
+Next: cosign key pair, then signing and SBOM attestations.
 Post 1 (hardening results) is the user's to write.
 See ROADMAP.md for the checklist.
 Note: in Claude Code sessions run ansible with `</dev/null` (non-blocking IO error otherwise).
