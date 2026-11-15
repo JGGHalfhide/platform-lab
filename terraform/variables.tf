@@ -28,6 +28,17 @@ variable "vm_name" {
   default     = "build-node-01"
 }
 
+variable "mac_address" {
+  description = "MAC address of the VM's NIC. scripts/host-bootstrap.sh reserves a fixed DHCP address for it; the Makefile passes the same value to both (NODE_MAC)."
+  type        = string
+  default     = "52:54:00:70:6c:01"
+
+  validation {
+    condition     = can(regex("^52:54:00(:[0-9a-f]{2}){3}$", var.mac_address))
+    error_message = "mac_address must be a lowercase locally administered QEMU MAC (52:54:00:xx:xx:xx)."
+  }
+}
+
 variable "vcpus" {
   description = "Number of virtual CPUs."
   type        = number

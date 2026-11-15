@@ -1,9 +1,15 @@
 ---
-# htpasswd Secret for the Zot registry (gitops/apps/zot.yaml mounts it).
-# Created here because its content comes from Ansible Vault.
+# Registry Secrets in the Zot namespace, created here because their content
+# comes from Ansible Vault:
+# - zot-htpasswd: push credentials (gitops/apps/zot.yaml mounts it).
+# - registry-tls: Traefik's certificate for the registry ingress, issued by
+#   the lab CA (scripts/lab-pki.sh; CA certificate in pki/lab-ca.crt).
 registry_auth_namespace: zot
 registry_auth_secret: zot-htpasswd
 registry_auth_htpasswd: "{{ vault_zot_htpasswd }}"
+registry_auth_tls_secret: registry-tls
+registry_auth_tls_crt: "{{ vault_registry_tls_crt }}"
+registry_auth_tls_key: "{{ vault_registry_tls_key }}"
 
 registry_auth_kubectl: >-
   /var/lib/rancher/rke2/bin/kubectl --kubeconfig /etc/rancher/rke2/rke2.yaml

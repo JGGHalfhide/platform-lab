@@ -110,6 +110,11 @@ resource "libvirt_domain" "node" {
         model = {
           type = "virtio"
         }
+        # Fixed MAC so the DHCP reservation made by scripts/host-bootstrap.sh
+        # gives the node the same address on every rebuild.
+        mac = {
+          address = var.mac_address
+        }
         source = {
           network = {
             network = var.network

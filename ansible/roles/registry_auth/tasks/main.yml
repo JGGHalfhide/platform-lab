@@ -1,5 +1,5 @@
 ---
-# The Secret's namespace must exist before kubectl diff can dry-run it.
+# The Secrets' namespace must exist before kubectl diff can dry-run them.
 # kubectl diff exits 0 when the live object matches, 1 when it differs or is
 # missing; apply only then, so a second run reports no changes. Server-side
 # apply keeps the Secret data out of the last-applied annotation.
@@ -16,33 +16,43 @@
   when: registry_auth_ns.rc != 0
   changed_when: true
 
-- name: Render the registry htpasswd Secret
+- name: Render the registry Secrets
   ansible.builtin.set_fact:
-    registry_auth_manifest: |
-      apiVersion: v1
-      kind: Secret
-      metadata:
-        name: {{ registry_auth_secret }}
-        namespace: {{ registry_auth_namespace }}
-      type: Opaque
-      stringData:
-        htpasswd: |
-          {{ registry_auth_htpasswd }}
+    registry_auth_manifests:
+      - apiVersion: v1
+        kind: Secret
+        metadata:
+          name: "{{ registry_auth_secret }}"
+          namespace: "{{ registry_auth_namespace }}"
+        type: Opaque
+        stringData:
+          htpasswd: "{{ registry_auth_htpasswd ~ '\n' }}"
+      - apiVersion: v1
+        kind: Secret
+        metadata:
+          name: "{{ registry_auth_tls_secret }}"
+          namespace: "{{ registry_auth_namespace }}"
+        type: kubernetes.io/tls
+        stringData:
+          tls.crt: "{{ registry_auth_tls_crt }}"
+          tls.key: "{{ registry_auth_tls_key }}"
   no_log: true
 
 - name: Compare with the cluster
   ansible.builtin.command:
     cmd: "{{ registry_auth_kubectl }} diff --server-side -f -"
-    stdin: "{{ registry_auth_manifest }}"
+    stdin: "{{ item | to_json }}"
+  loop: "{{ registry_auth_manifests }}"
   register: registry_auth_diff
   changed_when: false
   failed_when: registry_auth_diff.rc > 1
   no_log: true
 
-- name: Apply the registry htpasswd Secret
+- name: Apply the registry Secrets
   ansible.builtin.command:
     cmd: "{{ registry_auth_kubectl }} apply --server-side -f -"
-    stdin: "{{ registry_auth_manifest }}"
-  when: registry_auth_diff.rc == 1
+    stdin: "{{ item.item | to_json }}"
+  loop: "{{ registry_auth_diff.results }}"
+  when: item.rc == 1
   changed_when: true
   no_log: true

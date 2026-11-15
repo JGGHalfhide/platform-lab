@@ -1,5 +1,12 @@
 .PHONY: host up inventory down verify argocd bench stig-scan
 
+# Node NIC and its reserved DHCP address (host-bootstrap reserves the address,
+# Terraform sets the MAC). registry.platform-lab.internal resolves to NODE_IP.
+NODE_MAC ?= 52:54:00:70:6c:01
+NODE_IP  ?= 192.168.122.10
+export NODE_MAC NODE_IP
+export TF_VAR_mac_address := $(NODE_MAC)
+
 host:
 	./scripts/host-bootstrap.sh
 
