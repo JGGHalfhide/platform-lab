@@ -151,7 +151,10 @@ Goal: every platform image is scanned, has an SBOM, and is signed; unsigned imag
   - Tested: `alpine:3.22` (17 packages) and `busybox:1.37.0` (2 packages) signed and attested; the attestation subject is the index digest; verification with a different public key fails ("invalid signature").
 - [ ] Optional: GitHub Actions workflow for the connected build path (scan + SBOM on push)
   - Deferred 11/15 (user's call); must be revisited, not dropped. Tracked again in Week 8 ("Circle back").
-- [ ] Kyverno installed via Argo CD
+- [x] Kyverno installed via Argo CD
+  - 11/15: Kyverno v1.19.2, chart 3.9.2 (`gitops/apps/kyverno.yaml`; 1.20.0 was 3 days old, so the latest patch of 1.19). Multi-source Application: the chart plus `gitops/kyverno/` for the namespace `default` ServiceAccount. ServerSideApply (large CRDs). Single replica per controller. Restricted Pod Security, no exemption; no automounted tokens (projected tokens for the controllers). Rendered and audited first via `helm template` in the Argo CD repo-server (no Helm on the host).
+  - kube-bench after install: 5.1.6 FAIL from the chart's CRD migration hook (finished pod kept, its ServiceAccount deleted). Migration disabled (in-place upgrades only); back to 80 pass / 1 fail (the Argo CD 5.1.3 exception). `docs/kube-bench.md`, `docs/scans/week4-kyverno-kube-bench.txt`.
+  - Helm test hook pods did not run under Argo CD; their image is pinned to v1.19.2 anyway.
 - [ ] Kyverno `verifyImages` policy using the cosign public key
 - [ ] Test: signed image admitted, unsigned image rejected (record both outputs in `docs/`)
 - [ ] Tag `v0.4`; publish Post 2 (supply chain)

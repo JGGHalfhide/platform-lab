@@ -19,6 +19,7 @@ v1.36.5 with `profile: cis`). Run with `make bench OUT=docs/scans/<name>.txt`.
 | `week1-kube-bench.txt` | RKE2 system components only | 81 | 0 | 42 |
 | `week2-kube-bench.txt` | same, after OS hardening | 81 | 0 | 42 |
 | `week3-kube-bench.txt` | plus Argo CD, local-path-provisioner, Zot | 80 | 1 | 42 |
+| `week4-kyverno-kube-bench.txt` | plus Kyverno v1.19.2 | 80 | 1 | 42 |
 
 The one Week 3 fail is a documented exception (below). The first Week 3 run,
 before fixes, failed 5.1.3, 5.1.5 and 5.1.6.
@@ -38,6 +39,22 @@ before fixes, failed 5.1.3, 5.1.5 and 5.1.6.
   container and Zot get no token at all. See
   `gitops/argocd/patches/token-*.yaml`.
 
+## Kyverno (Week 4)
+
+- No automounted tokens: the chart's `automountServiceAccountToken: false`
+  for every component, which makes it mount a projected, time-limited token
+  for the four controllers; the namespace `default` ServiceAccount is declared
+  in `gitops/kyverno/`.
+- The first run after installing failed 5.1.6. The chart's post-upgrade CRD
+  migration hook (Argo CD runs it as PostSync) keeps the finished Job's pod
+  but deletes its ServiceAccount, and the check treats a pod whose
+  ServiceAccount is missing as non-compliant. The pod set
+  `automountServiceAccountToken: false` and had exited, so no token was
+  exposed. The hook's ClusterRole also uses wildcards (5.1.3) while it runs.
+  Fixed by disabling the migration (`crds.migration.enabled: false`): it only
+  matters for in-place upgrades, and this cluster upgrades by rebuild.
+- No Kyverno ClusterRole uses wildcards.
+
 ## Exceptions
 
 | Check | Objects | Reason |
@@ -53,4 +70,4 @@ namespace except `kube-system` and a few RKE2 namespaces.
 |---|---|---|
 | `local-path-storage` | `privileged` (warn and audit stay `restricted`) | The provisioner's helper pods create and delete volume directories through a `hostPath` mount, which `baseline` and `restricted` both forbid. The provisioner itself runs with a restricted security context. |
 
-Argo CD and Zot run under `restricted` with no exemption.
+Argo CD, Zot and Kyverno run under `restricted` with no exemption.

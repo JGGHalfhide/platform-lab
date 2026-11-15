@@ -107,7 +107,10 @@ Done (11/15): cosign key pair (`scripts/cosign-keygen.sh`): private key
 public key pki/cosign.pub. No Rekor: sign with --use-signing-config=false --tlog-upload=false.
 Done (11/15): `make image` signs the index digest and attaches the SPDX SBOM as a cosign
 attestation (tag-based .sig/.att via --new-bundle-format=false; skipped when already valid).
-Next: Kyverno via Argo CD (the GitHub Actions item is optional).
+Done (11/15): Kyverno v1.19.2 (chart 3.9.2) via Argo CD, restricted PSS, no token
+automount; CRD migration hook disabled (it broke kube-bench 5.1.6). kube-bench 80/1.
+Next: Kyverno verifyImages policy with pki/cosign.pub (ignoreTlog, tag-based signatures).
+GitHub Actions item deferred to Week 8.
 Reminders for Week 8 (in ROADMAP.md): circle back to the deferred Week 4 GitHub Actions
 workflow; remind the user about docs/stack.md (full tech stack spec with each tool's use
 and rationale, end-to-end workflow breakdown, Mermaid diagram).
