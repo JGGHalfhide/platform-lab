@@ -21,6 +21,8 @@ role; scans are run with `make stig-scan`.
   local-path-provisioner and Zot running): 398 pass / 29 fail. The one new
   fail, `no_files_unowned_by_user`, comes from container-owned files and is
   listed under Exceptions. Kubernetes results are in `docs/kube-bench.md`.
+- Week 4: `docs/scans/week4-stig.{html,xml}.gz` (fresh rebuild, plus Kyverno
+  and the image policy): 398 pass / 29 fail, the same 29 rules as Week 3.
 
 ## Results
 

@@ -113,7 +113,10 @@ Done (11/15): ImageValidatingPolicy verify-platform-images (digest + signature f
 127.0.0.1:30500/* images, verified via zot.zot.svc:5000 through a custom image extractor);
 signed admitted, unsigned rejected (docs/supply-chain.md). SBOM attestation not checked at
 admission (Kyverno bug #17109; tracked in ROADMAP open questions).
-Next: Week 4 rebuild acceptance, then tag v0.4. GitHub Actions item deferred to Week 8.
+Done (11/15): rebuild 8m09s (site.yml now waits for SSH: stale lease with the fixed MAC);
+apps healthy, changed=0, admission test passes, kube-bench 80/1, STIG 398/29. Week 4 tagged v0.4.
+After a rebuild the registry is empty: republish images with `make image`.
+Next: Week 5 (policy set). GitHub Actions item deferred to Week 8. Post 2 is the user's to write.
 Reminders for Week 8 (in ROADMAP.md): circle back to the deferred Week 4 GitHub Actions
 workflow; remind the user about docs/stack.md (full tech stack spec with each tool's use
 and rationale, end-to-end workflow breakdown, Mermaid diagram).

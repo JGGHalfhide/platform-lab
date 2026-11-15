@@ -20,6 +20,7 @@ v1.36.5 with `profile: cis`). Run with `make bench OUT=docs/scans/<name>.txt`.
 | `week2-kube-bench.txt` | same, after OS hardening | 81 | 0 | 42 |
 | `week3-kube-bench.txt` | plus Argo CD, local-path-provisioner, Zot | 80 | 1 | 42 |
 | `week4-kyverno-kube-bench.txt` | plus Kyverno v1.19.2 | 80 | 1 | 42 |
+| `week4-kube-bench.txt` | same, fresh rebuild | 80 | 1 | 42 |
 
 The one Week 3 fail is a documented exception (below). The first Week 3 run,
 before fixes, failed 5.1.3, 5.1.5 and 5.1.6.

@@ -1,4 +1,16 @@
 ---
+# The node keeps a fixed MAC and address across rebuilds, so libvirt can still
+# hold the previous VM's DHCP lease and Terraform's wait_for_ip returns before
+# the new VM has booted. Wait for SSH itself.
+- name: Wait for the node to accept SSH
+  hosts: rke2_servers
+  gather_facts: false
+  tasks:
+    - name: Wait for connection
+      ansible.builtin.wait_for_connection:
+        delay: 5
+        timeout: 600
+
 - name: Base OS configuration, STIG hardening and RKE2
   hosts: rke2_servers
   become: true

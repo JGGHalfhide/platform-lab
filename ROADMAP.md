@@ -161,7 +161,13 @@ Goal: every platform image is scanned, has an SBOM, and is signed; unsigned imag
   - SBOM attestation check left out: Kyverno bug kyverno/kyverno#17109 (attestations fail with `insecureIgnoreTlog`; open, not fixed in 1.20). See Open questions.
 - [x] Test: signed image admitted, unsigned image rejected (record both outputs in `docs/`)
   - 11/15: signed pod admitted and ran; unsigned pod, tag-only reference and an unsigned Deployment rejected with the policy message. `docs/supply-chain.md`, `docs/scans/week4-admission-test.txt`.
-- [ ] Tag `v0.4`; publish Post 2 (supply chain)
+- [x] Full `make down && make up` rebuild (acceptance check before tagging)
+  - 11/15: first attempt failed at Ansible ("No route to host"): with the fixed MAC, libvirt still held the destroyed VM's lease for 192.168.122.10, so Terraform's `wait_for_ip` returned before the new VM booted. Fixed with a `wait_for_connection` play at the top of `site.yml`.
+  - Retry: `make down` 2s, `make up` 8m09s, all six Argo CD apps Synced/Healthy 87s later (the `policies` app waited for Kyverno's CRDs on its own); second Ansible run `changed=0`.
+  - Registry starts empty after a rebuild: republished `alpine:3.22` and `busybox:1.37.0` (signed) and `busybox:1.36.1` (`SIGN=0`). Signed pod admitted and ran; unsigned rejected with the policy message.
+  - kube-bench 80 pass / 1 fail (Argo CD 5.1.3 exception), `docs/scans/week4-kube-bench.txt`. STIG 398 / 29, the same 29 rules as Week 3, `docs/scans/week4-stig.*.gz`.
+- [x] Tag `v0.4`
+- [ ] Publish Post 2 (supply chain)
 
 Acceptance: an unsigned image deployment fails admission with a clear policy message.
 
