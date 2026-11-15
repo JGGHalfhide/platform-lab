@@ -107,8 +107,12 @@ Goal: cluster state is driven from `gitops/`.
   - `gitops/root.yaml` (automated, prune, selfHeal), one Application per file in `gitops/apps/`. Argo CD reads the public GitHub repo, so changes must be pushed before they sync.
 - [x] Argo CD manages itself from Git
   - `gitops/apps/argocd.yaml` points at the same kustomization used for bootstrap (ServerSideApply, selfHeal, no prune). Self-heal check: a deleted NetworkPolicy was restored in 2s.
-- [ ] In-cluster registry (Zot by default; Harbor optional) deployed via Argo CD, with persistent storage (local-path-provisioner)
-- [ ] Ingress using the controller bundled with the installed RKE2 version (v1.36 ships Traefik, `rke2-traefik` in `kube-system`)
+- [x] In-cluster registry (Zot by default; Harbor optional) deployed via Argo CD, with persistent storage (local-path-provisioner)
+  - local-path-provisioner v0.0.37 (`gitops/local-path-storage`, default StorageClass). Namespace enforces `privileged` (helper pods mount hostPath), warn/audit stay `restricted`; the provisioner itself runs restricted. Helper image pinned (`busybox:1.37.0@sha256:...`; upstream is untagged). Volume dirs `1777` (sticky, for STIG); `/opt/local-path-provisioner` created by the rke2 role (`0700`, `container_file_t` from rke2-selinux). Tested: non-root pod writes to a PVC; deleting the PVC removes the directory.
+  - Zot v2.1.23, Helm chart 0.1.134 (`gitops/apps/zot.yaml`), StatefulSet with a 10Gi local-path PVC, restricted securityContext. Anonymous read; push only as `admin` (htpasswd). The htpasswd Secret is built from Ansible Vault by the `registry_auth` role (hash stored in Vault so the role stays idempotent). Tested: anonymous push 401, wrong password 401, admin 202.
+  - NodePort 30500 for node pulls via `127.0.0.1:30500` (Zarf's pattern); ingress for pushes and the UI.
+- [x] Ingress using the controller bundled with the installed RKE2 version (v1.36 ships Traefik, `rke2-traefik` in `kube-system`)
+  - `registry.platform-lab.internal` on Traefik (host ports 80/443, Traefik's default self-signed cert for now). Traefik never publishes an Ingress address, so `argocd-cm` treats Ingresses as Healthy once they exist.
 - [ ] Push a test image to the registry and pull it from a pod
 - [ ] Tag `v0.3`
 

@@ -86,6 +86,11 @@ Done (11/14): from-scratch rebuild 7m20s, same results; Week 2 tagged v0.2.
 Week 3 (GitOps and registry):
 Done (11/14): Argo CD v3.6.1 (`make argocd`, run by `make up`), app-of-apps root
 (gitops/root.yaml -> gitops/apps/), Argo CD self-managed; restricted PSS, no exemption.
-Next: local-path-provisioner, then Zot. Post 1 (hardening results) is the user's to write.
+Done (11/15): local-path-provisioner (default StorageClass, privileged PSS exception
+for its helper pods) and Zot v2.1.23 via Argo CD (anonymous read, admin push with
+htpasswd from Vault via `registry_auth` role; NodePort 30500, Traefik ingress
+registry.platform-lab.internal).
+Next: push/pull test (needs crane on the build host), then tag v0.3.
+Post 1 (hardening results) is the user's to write.
 See ROADMAP.md for the checklist.
 Note: in Claude Code sessions run ansible with `</dev/null` (non-blocking IO error otherwise).
