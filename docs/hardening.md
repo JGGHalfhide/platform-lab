@@ -17,6 +17,10 @@ role; scans are run with `make stig-scan`.
   `docs/scans/week2-hardened.{html,xml}.gz` (VM hardened in place) and
   `docs/scans/week2-rebuild.{html,xml}.gz` (fresh `make down && make up`;
   identical result, 399 pass / 28 fail).
+- Week 3: `docs/scans/week3-rebuild.{html,xml}.gz` (fresh rebuild with Argo CD,
+  local-path-provisioner and Zot running): 398 pass / 29 fail. The one new
+  fail, `no_files_unowned_by_user`, comes from container-owned files and is
+  listed under Exceptions. Kubernetes results are in `docs/kube-bench.md`.
 
 ## Results
 
@@ -91,7 +95,7 @@ skipped.
 | `postfix_client_configure_mail_alias` | medium | The check expects root's alias to be the profile's placeholder value (change_me@localhost). Root's mail goes to the admin user instead. |
 | `dir_perms_world_writable_sticky_bits` | medium | Only kubelet pod volumes and container image layers match; Kubernetes manages those paths. |
 | `file_permissions_ungroupowned` | medium | Only kubelet pod volumes and container image layers match; Kubernetes manages those paths. |
-| `no_files_unowned_by_user` | medium | Only kubelet pod volumes and container image layers match; Kubernetes manages those paths. Files there are owned by container image UIDs (for example 1001, 42, 65532) that have no host account. Appeared in Week 3 once Argo CD and Zot images were on the node. |
+| `no_files_unowned_by_user` | medium | Only kubelet pod volumes, local-path persistent volumes and container image layers match: files owned by container UIDs that have no host account (for example 65532 for Zot, 1001 for dex). Workloads deliberately do not share UIDs with host users. Appeared in Week 3 with the first non-system workloads. |
 
 ## Operational notes
 

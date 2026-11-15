@@ -116,7 +116,11 @@ Goal: cluster state is driven from `gitops/`.
 - [x] Push a test image to the registry and pull it from a pod
   - 11/15: `crane copy` of `busybox:1.37.0` and `alpine:3.22` (pinned digests) into Zot as `admin`; digests unchanged; anonymous push rejected (UNAUTHORIZED). A restricted, non-root pod pulled `127.0.0.1:30500/library/alpine:3.22@sha256:...` in 178ms; Zot's log shows containerd (v2.3.4-k3s1) fetching both manifests and both blobs over plain HTTP to localhost, so no `registries.yaml` change is needed.
   - The push went over the NodePort (HTTP) because the build host cannot resolve `registry.platform-lab.internal`. Week 4's push script should use the TLS ingress: needs name resolution on the build host and a trusted CA instead of Traefik's self-signed default.
-- [ ] Tag `v0.3`
+- [x] Full `make down && make up` rebuild (acceptance check before tagging)
+  - 11/15: `make up` 8m12s to a Ready node with all four Argo CD apps Synced/Healthy; second Ansible run `changed=0`; push/pull retested.
+  - The rebuild's scans found regressions from the new workloads. kube-bench 3 FAIL: 5.1.5 and 5.1.6 were fixed (no token automount outside kube-system; projected tokens for API clients), and 5.1.3 (Argo CD wildcard ClusterRoles) is a documented exception, giving 80 pass / 1 fail. STIG 398/29: new `no_files_unowned_by_user` (container UIDs) added as exception 29. Details in `docs/kube-bench.md` and `docs/hardening.md`.
+  - Zot moved from UID 1000 (the node's `rocky` user) to 65532; its PVC was recreated.
+- [x] Tag `v0.3`
 
 Acceptance: deleting an app's resources causes Argo CD to restore them; a commit to `gitops/` changes the cluster.
 

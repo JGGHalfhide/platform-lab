@@ -91,7 +91,12 @@ for its helper pods) and Zot v2.1.23 via Argo CD (anonymous read, admin push wit
 htpasswd from Vault via `registry_auth` role; NodePort 30500, Traefik ingress
 registry.platform-lab.internal).
 Done (11/15): push/pull test (crane push as admin, restricted pod pulls via 127.0.0.1:30500).
-Next: from-scratch rebuild check, then tag v0.3.
+Done (11/15): rebuild 8m12s; kube-bench 80 pass / 1 fail (5.1.3 Argo CD wildcard
+RBAC, documented in docs/kube-bench.md; 5.1.5/5.1.6 fixed with projected tokens);
+STIG 398/29 (new exception no_files_unowned_by_user); Zot runs as UID 65532.
+Week 3 tagged v0.3.
+Next: Week 4 (supply chain). Open item from Week 3: push over the TLS ingress needs
+name resolution and a trusted CA on the build host.
 Post 1 (hardening results) is the user's to write.
 See ROADMAP.md for the checklist.
 Note: in Claude Code sessions run ansible with `</dev/null` (non-blocking IO error otherwise).

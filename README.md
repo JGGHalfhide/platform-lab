@@ -39,9 +39,9 @@ configured by hand.
 | Measure | Result |
 |---|---|
 | DISA STIG scan (OpenSCAP, RHEL 9 STIG profile) | 38.6% → **93.4%** pass (164 → 399 rules); high-severity fails 11 → 1 |
-| Remaining STIG fails | 28, every one a documented exception with a reason |
-| kube-bench (RKE2 CIS 1.9) | 81 pass, **0 fail** before and after OS hardening |
-| Rebuild from nothing (`make down && make up`) | **7m20s** to a Ready, hardened node |
+| Remaining STIG fails | 28 (Week 2), 29 with workloads running (Week 3): every one a documented exception with a reason |
+| kube-bench (RKE2 CIS 1.9) | 81 pass, **0 fail** before and after OS hardening; 80 pass, 1 documented exception (Argo CD wildcard RBAC) with the GitOps stack running |
+| Rebuild from nothing (`make down && make up`) | **7m20s** to a Ready, hardened node (Week 2); **8m12s** including Argo CD, storage and registry (Week 3) |
 | Idempotency | Second Ansible run reports `changed=0` |
 
 Details: [docs/hardening.md](docs/hardening.md). Scan reports are in
