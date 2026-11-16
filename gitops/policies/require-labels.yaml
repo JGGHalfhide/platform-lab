@@ -1,0 +1,26 @@
+# Pods carry the recommended app.kubernetes.io/name label, so reports,
+# dashboards and NetworkPolicies can select workloads by application.
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: require-labels
+  annotations:
+    policies.kyverno.io/title: Require the app.kubernetes.io/name label
+    policies.kyverno.io/category: Operations
+    policies.kyverno.io/description: >-
+      Pods must carry a non-empty app.kubernetes.io/name label.
+spec:
+  validationActions: [Audit]
+  evaluation:
+    background:
+      enabled: true
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  validations:
+    - expression: >-
+        object.metadata.?labels.orValue({})[?'app.kubernetes.io/name'].orValue('') != ''
+      message: pods must carry a non-empty app.kubernetes.io/name label

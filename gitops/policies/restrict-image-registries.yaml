@@ -1,0 +1,39 @@
+# Images come only from the platform's registries, where `make image` (and
+# Zarf, on the airgapped cluster) has scanned and signed them.
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: restrict-image-registries
+  annotations:
+    policies.kyverno.io/title: Trusted registries only
+    policies.kyverno.io/category: Supply chain
+    policies.kyverno.io/description: >-
+      Container images must come from the in-cluster registry
+      (127.0.0.1:30500) or the Zarf registry on the airgapped cluster
+      (127.0.0.1:31999).
+spec:
+  validationActions: [Audit]
+  evaluation:
+    background:
+      enabled: true
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  variables:
+    - name: trusted
+      expression: "['127.0.0.1:30500/', '127.0.0.1:31999/']"
+    - name: untrusted
+      expression: >-
+        (object.spec.containers
+        + object.spec.?initContainers.orValue([])
+        + object.spec.?ephemeralContainers.orValue([]))
+        .map(c, c.image)
+        .filter(i, !variables.trusted.exists(p, i.startsWith(p)))
+  validations:
+    - expression: size(variables.untrusted) == 0
+      messageExpression: >-
+        'images must come from a trusted registry (' + variables.trusted.join(', ') +
+        '): ' + variables.untrusted.join(', ')

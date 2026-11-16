@@ -1,0 +1,41 @@
+# Every container declares CPU and memory requests and a memory limit.
+# CPU limits are not required: they throttle bursts without protecting other
+# workloads, which the CPU request already does.
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: require-resources
+  annotations:
+    policies.kyverno.io/title: Require resource requests and memory limits
+    policies.kyverno.io/category: Resource management
+    policies.kyverno.io/description: >-
+      Containers must set requests.cpu, requests.memory and limits.memory so
+      the scheduler can place them and one workload cannot exhaust node
+      memory.
+spec:
+  validationActions: [Audit]
+  evaluation:
+    background:
+      enabled: true
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  variables:
+    # Ephemeral (debug) containers cannot set resources.
+    - name: missing
+      expression: >-
+        (object.spec.containers + object.spec.?initContainers.orValue([]))
+        .filter(c,
+          !has(c.resources) ||
+          !('cpu' in c.resources.?requests.orValue({})) ||
+          !('memory' in c.resources.?requests.orValue({})) ||
+          !('memory' in c.resources.?limits.orValue({})))
+        .map(c, c.name)
+  validations:
+    - expression: size(variables.missing) == 0
+      messageExpression: >-
+        'containers must set requests.cpu, requests.memory and limits.memory: ' +
+        variables.missing.join(', ')

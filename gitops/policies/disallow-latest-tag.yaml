@@ -1,0 +1,36 @@
+# Images must name a tag other than latest, or a digest. An untagged
+# reference means :latest.
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: disallow-latest-tag
+  annotations:
+    policies.kyverno.io/title: Disallow latest and untagged images
+    policies.kyverno.io/category: Supply chain
+    policies.kyverno.io/description: >-
+      Container images must be pinned to a tag other than latest or to a
+      digest, so a deployment always runs the image that was reviewed.
+spec:
+  validationActions: [Audit]
+  evaluation:
+    background:
+      enabled: true
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  variables:
+    - name: images
+      expression: >-
+        (object.spec.containers
+        + object.spec.?initContainers.orValue([])
+        + object.spec.?ephemeralContainers.orValue([])).map(c, c.image)
+    - name: unpinned
+      expression: >-
+        variables.images.filter(i, !image(i).containsDigest() && image(i).tag() == 'latest')
+  validations:
+    - expression: size(variables.unpinned) == 0
+      messageExpression: >-
+        'images must use a tag other than latest, or a digest: ' + variables.unpinned.join(', ')

@@ -1,0 +1,27 @@
+# Pod Security Standards (baseline): HostPath Volumes.
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: disallow-host-path
+  annotations:
+    policies.kyverno.io/title: Disallow hostPath volumes
+    policies.kyverno.io/category: Pod Security Standards (baseline)
+    policies.kyverno.io/description: >-
+      Pods must not mount directories from the node's filesystem.
+spec:
+  validationActions: [Audit]
+  evaluation:
+    background:
+      enabled: true
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  validations:
+    - expression: >-
+        object.spec.?volumes.orValue([]).all(v, !has(v.hostPath))
+      messageExpression: >-
+        'hostPath volumes are not allowed: ' +
+        object.spec.?volumes.orValue([]).filter(v, has(v.hostPath)).map(v, v.name).join(', ')

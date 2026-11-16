@@ -1,0 +1,114 @@
+# Pod Security Standards (restricted), every control except the two with
+# their own policies (disallow-privileged-containers, disallow-host-path).
+# Mirrors the built-in Pod Security admission that RKE2's CIS profile
+# enforces, but also produces PolicyReports and covers namespaces with a
+# Pod Security exemption.
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: pod-security-restricted
+  annotations:
+    policies.kyverno.io/title: Pod Security Standards (restricted)
+    policies.kyverno.io/category: Pod Security Standards (restricted)
+    policies.kyverno.io/description: >-
+      Host namespaces, host ports, capabilities, privilege escalation,
+      non-root, seccomp, AppArmor, SELinux, /proc mount, sysctls and volume
+      types, as in the restricted Pod Security Standard.
+spec:
+  validationActions: [Audit]
+  evaluation:
+    background:
+      enabled: true
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  variables:
+    - name: containers
+      expression: >-
+        object.spec.containers
+        + object.spec.?initContainers.orValue([])
+        + object.spec.?ephemeralContainers.orValue([])
+    - name: podSC
+      expression: object.spec.?securityContext.orValue({})
+  validations:
+    # baseline: Host Namespaces
+    - expression: >-
+        !object.spec.?hostNetwork.orValue(false) &&
+        !object.spec.?hostPID.orValue(false) &&
+        !object.spec.?hostIPC.orValue(false)
+      message: hostNetwork, hostPID and hostIPC must not be set
+    # baseline: HostProcess
+    - expression: >-
+        !variables.podSC.?windowsOptions.?hostProcess.orValue(false) &&
+        variables.containers.all(c, !c.?securityContext.?windowsOptions.?hostProcess.orValue(false))
+      message: Windows HostProcess pods are not allowed
+    # baseline: Host Ports
+    - expression: >-
+        variables.containers.all(c, c.?ports.orValue([]).all(p, p.?hostPort.orValue(0) == 0))
+      message: hostPort must not be set
+    # baseline: AppArmor
+    - expression: >-
+        variables.podSC.?appArmorProfile.?type.orValue('RuntimeDefault') in ['RuntimeDefault', 'Localhost'] &&
+        variables.containers.all(c,
+          c.?securityContext.?appArmorProfile.?type.orValue('RuntimeDefault') in ['RuntimeDefault', 'Localhost'])
+      message: AppArmor profile must be RuntimeDefault or Localhost
+    # baseline: SELinux
+    - expression: >-
+        [variables.podSC.?seLinuxOptions.orValue({})]
+        .all(o, o.?type.orValue('') in ['', 'container_t', 'container_init_t', 'container_kvm_t', 'container_engine_t']
+          && o.?user.orValue('') == '' && o.?role.orValue('') == '') &&
+        variables.containers.all(c, [c.?securityContext.?seLinuxOptions.orValue({})]
+          .all(o, o.?type.orValue('') in ['', 'container_t', 'container_init_t', 'container_kvm_t', 'container_engine_t']
+            && o.?user.orValue('') == '' && o.?role.orValue('') == ''))
+      message: SELinux type must be a container type, and user and role must not be set
+    # baseline: /proc Mount Type
+    - expression: >-
+        variables.containers.all(c, c.?securityContext.?procMount.orValue('Default') == 'Default')
+      message: procMount must be Default
+    # baseline: Sysctls
+    - expression: >-
+        variables.podSC.?sysctls.orValue([]).all(s, s.name in [
+          'kernel.shm_rmid_forced', 'net.ipv4.ip_local_port_range',
+          'net.ipv4.ip_unprivileged_port_start', 'net.ipv4.tcp_syncookies',
+          'net.ipv4.ping_group_range', 'net.ipv4.ip_local_reserved_ports',
+          'net.ipv4.tcp_keepalive_time', 'net.ipv4.tcp_fin_timeout',
+          'net.ipv4.tcp_keepalive_intvl', 'net.ipv4.tcp_keepalive_probes'])
+      message: only the safe sysctl set is allowed
+    # restricted: Volume Types (hostPath is reported by disallow-host-path)
+    - expression: >-
+        object.spec.?volumes.orValue([]).all(v,
+          has(v.configMap) || has(v.csi) || has(v.downwardAPI) || has(v.emptyDir) ||
+          has(v.ephemeral) || has(v.persistentVolumeClaim) || has(v.projected) ||
+          has(v.secret) || has(v.hostPath))
+      message: >-
+        only configMap, csi, downwardAPI, emptyDir, ephemeral,
+        persistentVolumeClaim, projected and secret volumes are allowed
+    # restricted: Privilege Escalation
+    - expression: >-
+        variables.containers.all(c, c.?securityContext.?allowPrivilegeEscalation.orValue(true) == false)
+      message: allowPrivilegeEscalation must be false in every container
+    # restricted: Running as Non-root
+    - expression: >-
+        variables.containers.all(c,
+          c.?securityContext.?runAsNonRoot.orValue(variables.podSC.?runAsNonRoot.orValue(false)) == true)
+      message: runAsNonRoot must be true (pod or every container)
+    # restricted: Running as Non-root user
+    - expression: >-
+        variables.podSC.?runAsUser.orValue(1) != 0 &&
+        variables.containers.all(c, c.?securityContext.?runAsUser.orValue(1) != 0)
+      message: runAsUser must not be 0
+    # restricted: Seccomp
+    - expression: >-
+        variables.containers.all(c,
+          c.?securityContext.?seccompProfile.?type.orValue(
+            variables.podSC.?seccompProfile.?type.orValue('')) in ['RuntimeDefault', 'Localhost'])
+      message: seccompProfile.type must be RuntimeDefault or Localhost (pod or every container)
+    # restricted: Capabilities
+    - expression: >-
+        variables.containers.all(c,
+          'ALL' in c.?securityContext.?capabilities.?drop.orValue([]) &&
+          c.?securityContext.?capabilities.?add.orValue([]).all(a, a == 'NET_BIND_SERVICE'))
+      message: every container must drop ALL capabilities and may add only NET_BIND_SERVICE
