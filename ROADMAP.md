@@ -192,7 +192,13 @@ Goal: documented policies mapped to Pod Security Standards and Kubernetes STIG f
   - Exempted (PolicyExceptions enabled, only in the `kyverno` namespace): `platform-bootstrap-images` adds the platform's exact upstream repositories to `restrict-image-registries` for the four platform namespaces via `allowedValues` (the policy still runs, so any other image fails); bootstrap components start before the registry exists, and Zarf rewrites all images on the airgap target. `local-path-helper-pods` exempts helper pods from `disallow-host-path` and `pod-security-restricted` (they need hostPath and root, as in the namespace's Pod Security exemption).
   - Gotcha: when a policy stops matching a resource, Kyverno leaves its old results in the PolicyReport; deleting the reports (they are regenerated) clears them.
   - Final scan: 0 failures for all seven policies across 26 resources each.
-- [ ] Switch to Enforce
+- [x] Switch to Enforce
+  - 11/16: all seven policies `validationActions: [Deny]` (user approved after the Audit review). Output in `docs/scans/week5-enforce-test.txt`:
+    - Non-compliant pod (upstream `nginx:latest`, no resources, no label; passes Pod Security admission) rejected with all four violations in one message.
+    - Compliant pod (signed platform image, label, resources) admitted and ran.
+    - Deployment missing resources rejected at the Deployment.
+    - Platform pods recreated under Enforce (Argo CD server, repo-server, application controller, Zot, local-path-provisioner): all admitted, apps Synced/Healthy.
+    - PVC create, write and delete: helper pods admitted through the exception.
 - [ ] `docs/policy-map.md`: policy → control/finding mapping
 - [ ] Tag `v0.5`
 

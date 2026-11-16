@@ -1,0 +1,30 @@
+# Enforce test, 2026-11-16T01:21Z, Kyverno v1.19.2, seven ValidatingPolicies in Deny mode
+
+## 1. Non-compliant pod: upstream image, :latest, no resources, no label (passes Pod Security admission)
+$ kubectl apply -f noncompliant-pod.yaml   # image: docker.io/library/nginx:latest
+Error from server: error when creating "STDIN": admission webhook "vpol.validate.kyverno.svc-fail" denied the request: Policy require-labels failed: pods must carry a non-empty app.kubernetes.io/name label; Policy require-resources failed: containers must set requests.cpu, requests.memory and limits.memory: app; Policy restrict-image-registries failed: images must come from a trusted registry (127.0.0.1:30500/, 127.0.0.1:31999/): docker.io/library/nginx:latest; Policy disallow-latest-tag failed: images must use a tag other than latest, or a digest: docker.io/library/nginx:latest
+
+## 2. Compliant pod: signed image from the platform registry, label, resources
+$ kubectl apply -f compliant-pod.yaml   # image: 127.0.0.1:30500/library/alpine:3.22@sha256:49340b346798875b5592e5d420241f2f9cfba5f47e62ebb1446a1b34734e898f
+pod/compliant created
+pod/compliant condition met
+
+## 3. Deployment with one violation (no resources): rejected at the Deployment
+$ kubectl apply -f noresources-deployment.yaml
+Error from server: error when creating "STDIN": admission webhook "vpol.validate.kyverno.svc-fail" denied the request: Policy require-resources failed: containers must set requests.cpu, requests.memory and limits.memory: app
+
+## 4. Volume provisioning under Enforce (local-path helper pods, local-path-helper-pods exception)
+persistentvolumeclaim/data created
+pod/writer created
+pod/writer condition met
+$ kubectl -n pvc-test logs writer
+hello
+pod "writer" deleted from pvc-test namespace
+persistentvolumeclaim "data" deleted from pvc-test namespace
+$ kubectl get pv pvc-8c89bd1f-c1a8-462a-8798-20f136389a7a
+Error from server (NotFound): persistentvolumes "pvc-8c89bd1f-c1a8-462a-8798-20f136389a7a" not found
+$ kubectl -n local-path-storage get events (helper pods)
+13m         Normal    Started             pod/helper-pod-create-pvc-eede863b-e5ca-4cfe-97d0-f2cf4d0c2860   Container started
+13m         Normal    Started             pod/helper-pod-delete-pvc-eede863b-e5ca-4cfe-97d0-f2cf4d0c2860   Container started
+10s         Normal    Started             pod/helper-pod-create-pvc-8c89bd1f-c1a8-462a-8798-20f136389a7a   Container started
+3s          Normal    Started             pod/helper-pod-delete-pvc-8c89bd1f-c1a8-462a-8798-20f136389a7a   Container started
