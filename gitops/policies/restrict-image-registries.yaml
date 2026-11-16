@@ -15,7 +15,7 @@ metadata:
       (127.0.0.1:30500) or the Zarf registry on the airgapped cluster
       (127.0.0.1:31999).
 spec:
-  validationActions: [Audit]
+  validationActions: [Deny]
   # Workload controllers that get a generated copy of this policy.
   # ReplicaSets are left out: their Deployment and their Pods are already
   # checked, and old scaled-to-zero ReplicaSets would only add noise.

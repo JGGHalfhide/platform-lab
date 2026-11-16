@@ -10,7 +10,7 @@ metadata:
       Containers must not run privileged; a privileged container has
       unrestricted access to the host.
 spec:
-  validationActions: [Audit]
+  validationActions: [Deny]
   # Workload controllers that get a generated copy of this policy.
   # ReplicaSets are left out: their Deployment and their Pods are already
   # checked, and old scaled-to-zero ReplicaSets would only add noise.

@@ -15,7 +15,7 @@ metadata:
       non-root, seccomp, AppArmor, SELinux, /proc mount, sysctls and volume
       types, as in the restricted Pod Security Standard.
 spec:
-  validationActions: [Audit]
+  validationActions: [Deny]
   # Workload controllers that get a generated copy of this policy.
   # ReplicaSets are left out: their Deployment and their Pods are already
   # checked, and old scaled-to-zero ReplicaSets would only add noise.

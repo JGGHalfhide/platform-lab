@@ -9,7 +9,7 @@ metadata:
     policies.kyverno.io/description: >-
       Pods must not mount directories from the node's filesystem.
 spec:
-  validationActions: [Audit]
+  validationActions: [Deny]
   # Workload controllers that get a generated copy of this policy.
   # ReplicaSets are left out: their Deployment and their Pods are already
   # checked, and old scaled-to-zero ReplicaSets would only add noise.

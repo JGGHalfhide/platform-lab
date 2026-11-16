@@ -11,7 +11,7 @@ metadata:
       Container images must be pinned to a tag other than latest or to a
       digest, so a deployment always runs the image that was reviewed.
 spec:
-  validationActions: [Audit]
+  validationActions: [Deny]
   # Workload controllers that get a generated copy of this policy.
   # ReplicaSets are left out: their Deployment and their Pods are already
   # checked, and old scaled-to-zero ReplicaSets would only add noise.
