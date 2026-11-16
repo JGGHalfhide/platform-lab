@@ -1,0 +1,128 @@
+# DISA Kubernetes STIG V-242415 (CNTR-K8-001160): Secrets must not be stored
+# as environment variables. Upstream passes the Redis password as
+# REDIS_PASSWORD (secretKeyRef to argocd-redis/auth) to Redis and to the three
+# components that connect to it; Redis also put it on its command line
+# (--requirepass), visible in the node's process list.
+#
+# - Clients: the argocd-redis Secret is mounted as files and
+#   REDIS_CREDS_DIR_PATH points at it (supported since Argo CD 3.x, takes
+#   precedence over the env vars; util/cache/cache.go). Only `auth` exists;
+#   the optional username/sentinel files are absent, which Argo CD accepts.
+# - Redis: a startup script writes `requirepass` into a config file on an
+#   in-memory emptyDir and execs redis-server with it, so the password is
+#   in neither the pod spec, the environment nor the command line.
+# - Files are mode 0440, group 999 via fsGroup (all four images run as UID
+#   999); nothing else can read them.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-redis
+spec:
+  template:
+    spec:
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: redis
+          command: ["sh", "-c"]
+          args:
+            - >-
+              umask 077 &&
+              printf 'requirepass "%s"\n' "$(cat /run/redis-auth/auth)" > /run/redis-conf/redis.conf &&
+              exec redis-server /run/redis-conf/redis.conf --save '' --appendonly no
+          env:
+            - name: REDIS_PASSWORD
+              $patch: delete
+          volumeMounts:
+            - name: redis-auth
+              mountPath: /run/redis-auth
+              readOnly: true
+            - name: redis-conf
+              mountPath: /run/redis-conf
+      volumes:
+        - name: redis-auth
+          secret:
+            secretName: argocd-redis
+            defaultMode: 0440
+        - name: redis-conf
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-server
+spec:
+  template:
+    spec:
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: argocd-server
+          env:
+            - name: REDIS_PASSWORD
+              $patch: delete
+            - name: REDIS_CREDS_DIR_PATH
+              value: /app/config/redis-creds
+          volumeMounts:
+            - name: redis-creds
+              mountPath: /app/config/redis-creds
+              readOnly: true
+      volumes:
+        - name: redis-creds
+          secret:
+            secretName: argocd-redis
+            defaultMode: 0440
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-repo-server
+spec:
+  template:
+    spec:
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: argocd-repo-server
+          env:
+            - name: REDIS_PASSWORD
+              $patch: delete
+            - name: REDIS_CREDS_DIR_PATH
+              value: /app/config/redis-creds
+          volumeMounts:
+            - name: redis-creds
+              mountPath: /app/config/redis-creds
+              readOnly: true
+      volumes:
+        - name: redis-creds
+          secret:
+            secretName: argocd-redis
+            defaultMode: 0440
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: argocd-application-controller
+spec:
+  template:
+    spec:
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: argocd-application-controller
+          env:
+            - name: REDIS_PASSWORD
+              $patch: delete
+            - name: REDIS_CREDS_DIR_PATH
+              value: /app/config/redis-creds
+          volumeMounts:
+            - name: redis-creds
+              mountPath: /app/config/redis-creds
+              readOnly: true
+      volumes:
+        - name: redis-creds
+          secret:
+            secretName: argocd-redis
+            defaultMode: 0440

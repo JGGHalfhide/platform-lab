@@ -28,6 +28,8 @@ patches:
   - path: patches/token-argocd-server.yaml
   # Kyverno require-resources: requests and memory limits for every container.
   - path: patches/resources.yaml
+  # STIG V-242415: the Redis password as mounted files, not env vars.
+  - path: patches/redis-creds-file.yaml
   # RKE2's Traefik listens on host ports behind a ClusterIP Service, so it
   # never publishes a load-balancer address in Ingress status. Argo CD's
   # default Ingress check waits for one and stays Progressing; treat an
