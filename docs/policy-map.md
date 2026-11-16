@@ -91,6 +91,8 @@ PolicyExceptions are enabled only in the `kyverno` namespace (Kyverno
 | Exception | Policies | Scope | Why |
 |---|---|---|---|
 | `platform-bootstrap-images` | `restrict-image-registries` | Pods in `argocd`, `zot`, `kyverno`, `local-path-storage` | The platform's components start before the in-cluster registry exists (or are the registry), so they run their upstream images. Fine-grained: the policy still runs and only the listed repositories (exact, up to the tag separator) are added to the trusted list. On the airgapped cluster Zarf rewrites every image and this exception matches nothing. |
+| `kube-bench-host-access` | `disallow-privileged-containers`, `disallow-host-path`, `pod-security-restricted` | The Job and pods labelled `app.kubernetes.io/name: kube-bench` in `kube-bench` (the namespace exists only while `make bench` runs) | The CIS scanner reads the node's RKE2 configuration: hostPID, read-only hostPath mounts, privileged (`spc_t` under SELinux). Its namespace has the matching Pod Security exemption. The Job sets the label and resources, and its image is pinned by digest. |
+| `kube-bench-image` | `restrict-image-registries` | Same | Fine-grained: adds only `docker.io/aquasec/kube-bench@sha256:` (digest references). Found by the Week 5 rebuild: Enforce had blocked `make bench`. |
 | `local-path-helper-pods` | `disallow-host-path`, `pod-security-restricted` | Pods named `helper-pod-*` in `local-path-storage` | The helper pods create and delete volume directories on the node: they need a `hostPath` mount and root. The same reason as the namespace's Pod Security exemption. The helper template still meets `require-labels`, `require-resources`, `disallow-latest-tag` and `restrict-image-registries`, and sets seccomp and no privilege escalation. |
 
 ## Gaps
@@ -103,5 +105,5 @@ policy):
 | V-242383 / CNTR-K8-000290 (high) | User-managed resources must be created in dedicated namespaces. | Not enforced, but met (checked 11/16): `default` holds only `service/kubernetes` (the one allowed object), and `kube-public` and `kube-node-lease` are empty. Also CIS 5.7.4 (The default namespace should not be used). |
 | V-242417 / CNTR-K8-001360 (medium) | Kubernetes must separate user functionality. | Not enforced; no user pods run in `kube-system`, `kube-public` or `kube-node-lease`. The policies skip `kube-system`, so a policy for this one would need its own scope. |
 
-Tests for every row above: `make policy-test` (87 cases in
+Tests for every row above: `make policy-test` (97 cases in
 `tests/policies/`). Enforcement evidence: `docs/scans/week5-enforce-test.txt`.

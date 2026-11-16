@@ -127,7 +127,10 @@ Done (11/16): docs/policy-map.md (PSS, CIS RKE2 1.9, DISA K8s STIG V2R6 from the
 Done (11/16): STIG V-242415 fixed: Argo CD reads the Redis password from the mounted Secret
 (REDIS_CREDS_DIR_PATH), Redis config built from the file; policy disallow-secret-env (Deny).
 Removing fields from gitops/argocd/ on a live cluster needs `make argocd` (SSA field ownership).
-Next: rebuild acceptance, tag v0.5.
+Done (11/16): rebuild 9m13s (argocd_redis_auth role creates the argocd-redis Secret from Vault:
+the mounted Secret otherwise deadlocks a fresh build); kube-bench now runs under Enforce via
+scoped PolicyExceptions; kube-bench 80/1, STIG 398/29. Week 5 tagged v0.5.
+Next: Week 6 (airgap deployment to the iMac).
 GitHub Actions item deferred to Week 8. Post 2 is the user's to write.
 Reminders for Week 8 (in ROADMAP.md): circle back to the deferred Week 4 GitHub Actions
 workflow; remind the user about docs/stack.md (full tech stack spec with each tool's use

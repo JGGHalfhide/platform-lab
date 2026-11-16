@@ -23,6 +23,8 @@ role; scans are run with `make stig-scan`.
   listed under Exceptions. Kubernetes results are in `docs/kube-bench.md`.
 - Week 4: `docs/scans/week4-stig.{html,xml}.gz` (fresh rebuild, plus Kyverno
   and the image policy): 398 pass / 29 fail, the same 29 rules as Week 3.
+- Week 5: `docs/scans/week5-stig.{html,xml}.gz` (fresh rebuild, Kyverno policy
+  set enforced): 398 pass / 29 fail, the same 29 rules as Week 4.
 
 ## Results
 

@@ -21,6 +21,7 @@ v1.36.5 with `profile: cis`). Run with `make bench OUT=docs/scans/<name>.txt`.
 | `week3-kube-bench.txt` | plus Argo CD, local-path-provisioner, Zot | 80 | 1 | 42 |
 | `week4-kyverno-kube-bench.txt` | plus Kyverno v1.19.2 | 80 | 1 | 42 |
 | `week4-kube-bench.txt` | same, fresh rebuild | 80 | 1 | 42 |
+| `week5-kube-bench.txt` | fresh rebuild, Kyverno policy set enforced | 80 | 1 | 42 |
 
 The one Week 3 fail is a documented exception (below). The first Week 3 run,
 before fixes, failed 5.1.3, 5.1.5 and 5.1.6.
@@ -55,6 +56,14 @@ before fixes, failed 5.1.3, 5.1.5 and 5.1.6.
   Fixed by disabling the migration (`crds.migration.enabled: false`): it only
   matters for in-place upgrades, and this cluster upgrades by rebuild.
 - No Kyverno ClusterRole uses wildcards.
+
+## Running under the Kyverno policies (Week 5)
+
+kube-bench needs hostPID, host paths and privileged mode, which the enforced
+policies reject. Two PolicyExceptions (`kube-bench-host-access`,
+`kube-bench-image` in `gitops/policies/exception-kube-bench.yaml`) match only
+the Job labelled `app.kubernetes.io/name: kube-bench` in the `kube-bench`
+namespace; see `docs/policy-map.md`.
 
 ## Exceptions
 

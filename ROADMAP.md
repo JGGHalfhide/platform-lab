@@ -202,7 +202,12 @@ Goal: documented policies mapped to Pod Security Standards and Kubernetes STIG f
 - [x] `docs/policy-map.md`: policy → control/finding mapping
   - 11/16: each policy rule mapped to its PSS control, CIS RKE2 1.9 control (5.2.x, 5.5.1, 5.7.x, the Manual WARNs kube-bench cannot decide) and DISA Kubernetes STIG V2R6 rule (IDs from the official XCCDF, zip SHA-256 recorded). V-242414 (host ports) is met directly; V-242437 is marked "intent" (its check only covers PodSecurityPolicy); V-254800 is met by RKE2's Pod Security admission, with Kyverno as a second layer. Exceptions and gaps listed.
   - Open STIG finding found while checking: V-242415 (high), Secrets as env vars: Argo CD's `REDIS_PASSWORD` from `secretKeyRef` in four workloads. Fixed the same day, with an eighth policy `disallow-secret-env` (Deny); `make policy-test` now 87 cases. See Open questions.
-- [ ] Tag `v0.5`
+- [x] Full `make down && make up` rebuild (acceptance check before tagging)
+  - 11/16, first attempt: `make argocd` timed out. The V-242415 fix mounted the `argocd-redis` Secret, which upstream creates at runtime from Redis's own `secret-init` init container, but the kubelet mounts volumes before init containers run: all four pods deadlocked on the missing Secret (the running cluster already had it). Fixed with the `argocd_redis_auth` Ansible role, which creates the Secret from Vault (`vault_argocd_redis_password`) before Argo CD starts; `secret-init` keeps an existing Secret.
+  - Second attempt: `make down` 2s, `make up` 9m13s, all six apps Synced/Healthy 46s later with the eight policies enforcing from the start; no failed pod creations; second Ansible run `changed=0`.
+  - Found by the acceptance checks: Enforce blocked `make bench` (kube-bench needs hostPID, host paths, privileged; upstream image). Fixed with a label and resources on the Job and two scoped PolicyExceptions (`kube-bench-host-access`, `kube-bench-image`); `make policy-test` 97 cases.
+  - Checks on the fresh cluster: images republished and signed; upstream `:latest`, unsigned and Secret-in-env pods rejected; compliant pod ran; PVC create/write/delete through the helper pods; 0 containers with Secrets in env; Redis `NOAUTH` without the password. kube-bench 80 pass / 1 fail (`docs/scans/week5-kube-bench.txt`); STIG 398 / 29, same rules as Week 4 (`docs/scans/week5-stig.*.gz`).
+- [x] Tag `v0.5`
 
 Acceptance: `make policy-test` passes; a deliberately non-compliant pod is rejected with a readable message.
 
