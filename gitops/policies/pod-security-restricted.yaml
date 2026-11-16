@@ -16,6 +16,12 @@ metadata:
       types, as in the restricted Pod Security Standard.
 spec:
   validationActions: [Audit]
+  # Workload controllers that get a generated copy of this policy.
+  # ReplicaSets are left out: their Deployment and their Pods are already
+  # checked, and old scaled-to-zero ReplicaSets would only add noise.
+  autogen:
+    podControllers:
+      controllers: [deployments, statefulsets, daemonsets, jobs, cronjobs]
   evaluation:
     background:
       enabled: true

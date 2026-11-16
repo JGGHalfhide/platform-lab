@@ -10,6 +10,12 @@ metadata:
       Pods must not mount directories from the node's filesystem.
 spec:
   validationActions: [Audit]
+  # Workload controllers that get a generated copy of this policy.
+  # ReplicaSets are left out: their Deployment and their Pods are already
+  # checked, and old scaled-to-zero ReplicaSets would only add noise.
+  autogen:
+    podControllers:
+      controllers: [deployments, statefulsets, daemonsets, jobs, cronjobs]
   evaluation:
     background:
       enabled: true
