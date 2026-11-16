@@ -56,6 +56,7 @@ Kyverno's webhooks skip it anyway).
 | `disallow-latest-tag` | image pinned to a tag other than `latest`, or a digest | (none) | 5.5.1 Configure Image Provenance (partly: a known, reviewable image) | No direct rule |
 | `restrict-image-registries` | images only from `127.0.0.1:30500/` or `127.0.0.1:31999/` (Zarf) | (none) | 5.5.1 Configure Image Provenance using ImagePolicyWebhook admission controller (met with a Kyverno webhook instead) | No direct rule |
 | `verify-platform-images` | platform registry images pinned by digest and signed with `pki/cosign.pub` | (none) | 5.5.1 (same) | No direct rule |
+| `disallow-secret-env` | no `env[].valueFrom.secretKeyRef`, no `envFrom[].secretRef` | (none) | (none) | **V-242415 / CNTR-K8-001160** (high) Secrets in Kubernetes must not be stored as environment variables |
 | `require-resources` | `requests.cpu`, `requests.memory`, `limits.memory` | (none) | (none) | No direct rule (availability; supports V-242417's separation of workloads by keeping one from starving the node) |
 | `require-labels` | `app.kubernetes.io/name` | (none) | (none) | No direct rule (operations: lets reports, dashboards and NetworkPolicies select workloads) |
 | All Kyverno policies | enforced through a validating admission webhook | (none) | 5.2.1 Ensure that the cluster has at least one active policy control mechanism in place | V-242436 / CNTR-K8-002000 (intent; the STIG's check only covers the pre-1.25 flag, and the `ValidatingAdmissionWebhook` plugin is on by default in 1.36) |
@@ -71,8 +72,15 @@ Notes on the STIG entries:
   control file configured".** Met by RKE2's CIS profile (Pod Security admission
   with `restricted` as the default). The Kyverno PSS policies are a second
   layer for the same requirement, not the control the STIG checks.
-- **V-242414 (CNTR-K8-000960)** is the one STIG rule a policy here meets
-  directly.
+- **V-242414 (CNTR-K8-000960)** and **V-242415 (CNTR-K8-001160)** are the
+  STIG rules policies here meet directly.
+- **V-242415** was an open finding until 11/16: Argo CD's upstream manifests
+  passed the Redis password as `REDIS_PASSWORD` from a `secretKeyRef` to four
+  workloads, and Redis also put it on its command line. Argo CD now reads it
+  from the mounted Secret (`REDIS_CREDS_DIR_PATH`) and Redis builds its
+  `requirepass` config from the file at startup
+  (`gitops/argocd/patches/redis-creds-file.yaml`); `disallow-secret-env`
+  keeps it that way.
 
 ## Exceptions
 
@@ -92,9 +100,8 @@ policy):
 
 | STIG | Title | Current state |
 |---|---|---|
-| V-242415 / CNTR-K8-001160 (high) | Secrets in Kubernetes must not be stored as environment variables. | **Open finding (checked 11/16).** Argo CD's upstream manifests pass the Redis password as `REDIS_PASSWORD` from a `secretKeyRef` in four workloads: `argocd-application-controller`, `argocd-redis`, `argocd-repo-server`, `argocd-server`. Nothing else uses Secrets in env. Fixing it means patching Argo CD to read the password from a mounted file; then a policy rejecting `env[].valueFrom.secretKeyRef` and `envFrom[].secretRef` can enforce it. |
 | V-242383 / CNTR-K8-000290 (high) | User-managed resources must be created in dedicated namespaces. | Not enforced, but met (checked 11/16): `default` holds only `service/kubernetes` (the one allowed object), and `kube-public` and `kube-node-lease` are empty. Also CIS 5.7.4 (The default namespace should not be used). |
 | V-242417 / CNTR-K8-001360 (medium) | Kubernetes must separate user functionality. | Not enforced; no user pods run in `kube-system`, `kube-public` or `kube-node-lease`. The policies skip `kube-system`, so a policy for this one would need its own scope. |
 
-Tests for every row above: `make policy-test` (76 cases in
+Tests for every row above: `make policy-test` (87 cases in
 `tests/policies/`). Enforcement evidence: `docs/scans/week5-enforce-test.txt`.

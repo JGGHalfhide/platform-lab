@@ -187,6 +187,18 @@ CASES = {
          ("empty-name-label", pod, set_(["labels", "app.kubernetes.io/name"], "", "meta")),
          ("no-labels-deploy", deployment, delete(["labels"], "meta"))],
     ),
+    "disallow-secret-env": (
+        [("compliant", pod, None),
+         ("configmap-env", pod, set_(["env"], [{"name": "MODE", "valueFrom": {"configMapKeyRef": {"name": "cfg", "key": "mode"}}}])),
+         ("plain-env", pod, set_(["env"], [{"name": "MODE", "value": "prod"}])),
+         ("secret-volume", pod, add_volume({"name": "creds", "secret": {"secretName": "db"}})),
+         ("compliant-deploy", deployment, None)],
+        [("secret-key-ref", pod, set_(["env"], [{"name": "DB_PASSWORD", "valueFrom": {"secretKeyRef": {"name": "db", "key": "password"}}}])),
+         ("env-from-secret", pod, set_(["envFrom"], [{"secretRef": {"name": "db"}}])),
+         ("init-secret-key-ref", pod, lambda s, m: s.update(initContainers=[
+             c0(s) | {"name": "init", "env": [{"name": "TOKEN", "valueFrom": {"secretKeyRef": {"name": "t", "key": "t"}}}]}])),
+         ("secret-key-ref-deploy", deployment, set_(["env"], [{"name": "DB_PASSWORD", "valueFrom": {"secretKeyRef": {"name": "db", "key": "password"}}}]))],
+    ),
     "restrict-image-registries": (
         [("compliant", pod, None),
          ("zarf-registry", pod, set_(["image"], "127.0.0.1:31999/library/alpine:3.22")),

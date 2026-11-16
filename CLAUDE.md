@@ -124,7 +124,9 @@ platform-bootstrap-images via allowedValues, local-path-helper-pods). Reports: 0
 Done (11/16): policies switched to Enforce (Deny); non-compliant pod rejected with readable
 messages, platform pods and PVC helper pods still admitted (docs/scans/week5-enforce-test.txt).
 Done (11/16): docs/policy-map.md (PSS, CIS RKE2 1.9, DISA K8s STIG V2R6 from the official XCCDF).
-Open STIG finding V-242415 (Argo CD REDIS_PASSWORD via secretKeyRef), in ROADMAP open questions.
+Done (11/16): STIG V-242415 fixed: Argo CD reads the Redis password from the mounted Secret
+(REDIS_CREDS_DIR_PATH), Redis config built from the file; policy disallow-secret-env (Deny).
+Removing fields from gitops/argocd/ on a live cluster needs `make argocd` (SSA field ownership).
 Next: rebuild acceptance, tag v0.5.
 GitHub Actions item deferred to Week 8. Post 2 is the user's to write.
 Reminders for Week 8 (in ROADMAP.md): circle back to the deferred Week 4 GitHub Actions

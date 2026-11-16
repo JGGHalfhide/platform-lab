@@ -201,7 +201,7 @@ Goal: documented policies mapped to Pod Security Standards and Kubernetes STIG f
     - PVC create, write and delete: helper pods admitted through the exception.
 - [x] `docs/policy-map.md`: policy → control/finding mapping
   - 11/16: each policy rule mapped to its PSS control, CIS RKE2 1.9 control (5.2.x, 5.5.1, 5.7.x, the Manual WARNs kube-bench cannot decide) and DISA Kubernetes STIG V2R6 rule (IDs from the official XCCDF, zip SHA-256 recorded). V-242414 (host ports) is met directly; V-242437 is marked "intent" (its check only covers PodSecurityPolicy); V-254800 is met by RKE2's Pod Security admission, with Kyverno as a second layer. Exceptions and gaps listed.
-  - Open STIG finding found while checking: V-242415 (high), Secrets as env vars: Argo CD's `REDIS_PASSWORD` from `secretKeyRef` in four workloads. See Open questions.
+  - Open STIG finding found while checking: V-242415 (high), Secrets as env vars: Argo CD's `REDIS_PASSWORD` from `secretKeyRef` in four workloads. Fixed the same day, with an eighth policy `disallow-secret-env` (Deny); `make policy-test` now 87 cases. See Open questions.
 - [ ] Tag `v0.5`
 
 Acceptance: `make policy-test` passes; a deliberately non-compliant pod is rejected with a readable message.
@@ -290,7 +290,7 @@ Decide these before the week that depends on them.
 - **iMac OS (Week 6). Decided 11/14: Rocky Linux 9.** Fedora has no STIG profile in scap-security-guide (CIS, OSPP, PCI-DSS and others only), and rke2-selinux packages target EL. Rocky 9 on the iMac lets the same base, hardening and RKE2 roles and the STIG scan apply to both clusters. Install from the Rocky 9 minimal/DVD ISO on bare metal (no cloud-init); the RKE2 airgap install still applies.
 - **iMac memory (Week 6-7).** 8 GB is tight for RKE2 plus Argo CD, Kyverno, a registry, Prometheus and Loki. Expect to trim (for example, no Argo CD on the target, since Zarf deploys) or set small resource limits.
 - **SBOM attestation at admission (open, upstream).** Kyverno 1.19/1.20 reject every tag-based cosign attestation when the transparency log is ignored (kyverno/kyverno#17109). Admission checks signatures only; `make image` verifies the SBOM attestation at publish time. When a fixed Kyverno ships, add a `verifyAttestationSignatures` validation for `https://spdx.dev/Document` to `gitops/policies/verify-platform-images.yaml`.
-- **STIG V-242415, Secrets in env vars (open finding).** Argo CD's upstream manifests set `REDIS_PASSWORD` from a `secretKeyRef` in application-controller, redis, repo-server and server. Fix: patch Argo CD to read the password from a mounted file (if it supports that), then add a Kyverno policy rejecting `secretKeyRef` / `envFrom.secretRef`. Decide when to schedule it.
+- **STIG V-242415, Secrets in env vars. Fixed 11/16 (user's call: before tagging v0.5).** Argo CD reads the Redis password from the mounted Secret (`REDIS_CREDS_DIR_PATH`, supported in 3.6.1), Redis builds its `requirepass` config on an in-memory emptyDir at startup (the password was also on its command line), files 0440 with `fsGroup: 999`. New Enforce policy `disallow-secret-env`. Gotcha: removing a field from `gitops/argocd/` on a running cluster needs `make argocd` again, because the bootstrap `kubectl apply --server-side` still owns the field and Argo CD's server-side apply cannot remove it (a fresh build is unaffected).
 - **Zarf and Kyverno image verification (Week 6).** Zarf rewrites image references to its own in-cluster registry. Test early that the `verifyImages` policy still admits signed images after the rewrite.
 
 ---
