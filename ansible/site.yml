@@ -20,3 +20,4 @@
     - openscap
     - rke2
     - registry_auth
+    - argocd_redis_auth

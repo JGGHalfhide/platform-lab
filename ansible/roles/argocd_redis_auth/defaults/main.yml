@@ -1,0 +1,13 @@
+---
+# The argocd-redis Secret (key `auth`), created before Argo CD is installed.
+# Upstream lets Redis's secret-init container create it at runtime, but the
+# Redis password is now mounted as a file (gitops/argocd/patches/
+# redis-creds-file.yaml, STIG V-242415) and the kubelet mounts volumes before
+# init containers run, so the Secret must already exist. secret-init keeps an
+# existing Secret (AlreadyExists is not an error).
+argocd_redis_auth_namespace: argocd
+argocd_redis_auth_secret: argocd-redis
+argocd_redis_auth_password: "{{ vault_argocd_redis_password }}"
+
+argocd_redis_auth_kubectl: >-
+  /var/lib/rancher/rke2/bin/kubectl --kubeconfig /etc/rancher/rke2/rke2.yaml
