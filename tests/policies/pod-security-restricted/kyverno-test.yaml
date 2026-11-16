@@ -9,6 +9,7 @@ resources:
 - resources.yaml
 exceptions:
 - ../../../gitops/policies/exception-local-path-helper.yaml
+- ../../../gitops/policies/exception-kube-bench.yaml
 results:
 - policy: pod-security-restricted
   resources:
@@ -123,5 +124,10 @@ results:
 - policy: pod-security-restricted
   resources:
   - helper-pod-delete-pvc-1
+  kind: Pod
+  result: skip
+- policy: pod-security-restricted
+  resources:
+  - kube-bench-host-pid
   kind: Pod
   result: skip

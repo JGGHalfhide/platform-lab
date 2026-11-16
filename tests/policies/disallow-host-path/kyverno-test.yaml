@@ -9,6 +9,7 @@ resources:
 - resources.yaml
 exceptions:
 - ../../../gitops/policies/exception-local-path-helper.yaml
+- ../../../gitops/policies/exception-kube-bench.yaml
 results:
 - policy: disallow-host-path
   resources:
@@ -38,5 +39,10 @@ results:
 - policy: disallow-host-path
   resources:
   - helper-pod-create-pvc-1
+  kind: Pod
+  result: skip
+- policy: disallow-host-path
+  resources:
+  - kube-bench-host-path
   kind: Pod
   result: skip

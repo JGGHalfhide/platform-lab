@@ -7,6 +7,8 @@ policies:
 - ../../../gitops/policies/disallow-privileged-containers.yaml
 resources:
 - resources.yaml
+exceptions:
+- ../../../gitops/policies/exception-kube-bench.yaml
 results:
 - policy: disallow-privileged-containers
   resources:
@@ -23,3 +25,18 @@ results:
   - privileged-deploy
   kind: Deployment
   result: fail
+- policy: disallow-privileged-containers
+  resources:
+  - privileged-kube-bench-ns-other-label
+  kind: Pod
+  result: fail
+- policy: disallow-privileged-containers
+  resources:
+  - privileged-kube-bench-label-other-ns
+  kind: Pod
+  result: fail
+- policy: disallow-privileged-containers
+  resources:
+  - kube-bench-privileged
+  kind: Pod
+  result: skip

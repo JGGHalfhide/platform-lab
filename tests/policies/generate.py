@@ -110,10 +110,22 @@ def add_volume(vol):
 # policy -> (passing, failing[, skipped]); each case is
 # (name, kind, change[, namespace]). Skipped: a PolicyException applies.
 EXCEPTIONS = {
-    "restrict-image-registries": ["exception-platform-bootstrap-images.yaml"],
-    "disallow-host-path": ["exception-local-path-helper.yaml"],
-    "pod-security-restricted": ["exception-local-path-helper.yaml"],
+    "restrict-image-registries": ["exception-platform-bootstrap-images.yaml", "exception-kube-bench.yaml"],
+    "disallow-host-path": ["exception-local-path-helper.yaml", "exception-kube-bench.yaml"],
+    "pod-security-restricted": ["exception-local-path-helper.yaml", "exception-kube-bench.yaml"],
+    "disallow-privileged-containers": ["exception-kube-bench.yaml"],
 }
+KUBE_BENCH = ("docker.io/aquasec/kube-bench@sha256:"
+              "75506f222d1eb6ce2a751a5533bdc0a3b54c898e2e49e7751d0ee22cfb862679")
+
+
+def kube_bench(*changes):
+    """The kube-bench label plus other changes."""
+    def change(spec, meta):
+        meta["labels"]["app.kubernetes.io/name"] = "kube-bench"
+        for c in changes:
+            c(spec, meta)
+    return change
 HOST_PATH = {"name": "data", "hostPath": {"path": "/opt/local-path-provisioner"}}
 ARGOCD = "quay.io/argoproj/argocd:v3.6.1"
 
@@ -121,7 +133,11 @@ CASES = {
     "disallow-privileged-containers": (
         [("compliant", pod, None)],
         [("privileged", pod, set_(["securityContext", "privileged"], True)),
-         ("privileged-deploy", deployment, set_(["securityContext", "privileged"], True))],
+         ("privileged-deploy", deployment, set_(["securityContext", "privileged"], True)),
+         # kube-bench exception: needs both the namespace and the label
+         ("privileged-kube-bench-ns-other-label", pod, set_(["securityContext", "privileged"], True), "kube-bench"),
+         ("privileged-kube-bench-label-other-ns", pod, kube_bench(set_(["securityContext", "privileged"], True)))],
+        [("kube-bench-privileged", pod, kube_bench(set_(["securityContext", "privileged"], True)), "kube-bench")],
     ),
     "disallow-host-path": (
         [("compliant", pod, None)],
@@ -130,7 +146,8 @@ CASES = {
          # the helper exception is scoped to its namespace and name prefix
          ("helper-pod-create-pvc-other-ns", pod, add_volume(HOST_PATH)),
          ("not-a-helper", pod, add_volume(HOST_PATH), "local-path-storage")],
-        [("helper-pod-create-pvc-1", pod, add_volume(HOST_PATH), "local-path-storage")],
+        [("helper-pod-create-pvc-1", pod, add_volume(HOST_PATH), "local-path-storage"),
+         ("kube-bench-host-path", pod, kube_bench(add_volume({"name": "etc", "hostPath": {"path": "/etc/rancher"}})), "kube-bench")],
     ),
     "pod-security-restricted": (
         [("compliant", pod, None),
@@ -157,7 +174,8 @@ CASES = {
          ("nfs-volume", pod, add_volume({"name": "nfs", "nfs": {"server": "nfs.example", "path": "/"}})),
          ("host-network-deploy", deployment, set_(["hostNetwork"], True, "pod")),
          ("root-not-helper", pod, set_(["securityContext", "runAsNonRoot"], False, "pod"), "local-path-storage")],
-        [("helper-pod-delete-pvc-1", pod, set_(["securityContext", "runAsNonRoot"], False, "pod"), "local-path-storage")],
+        [("helper-pod-delete-pvc-1", pod, set_(["securityContext", "runAsNonRoot"], False, "pod"), "local-path-storage"),
+         ("kube-bench-host-pid", pod, kube_bench(set_(["hostPID"], True, "pod")), "kube-bench")],
     ),
     "disallow-latest-tag": (
         [("compliant", pod, None),
@@ -204,7 +222,9 @@ CASES = {
          ("zarf-registry", pod, set_(["image"], "127.0.0.1:31999/library/alpine:3.22")),
          # platform-bootstrap-images exception: listed repos, platform namespaces
          ("argocd-upstream", pod, set_(["image"], ARGOCD), "argocd"),
-         ("zot-upstream", pod, set_(["image"], "ghcr.io/project-zot/zot:v2.1.23"), "zot")],
+         ("zot-upstream", pod, set_(["image"], "ghcr.io/project-zot/zot:v2.1.23"), "zot"),
+         # kube-bench-image exception: the pinned scanner, in its namespace, with its label
+         ("kube-bench-image", pod, kube_bench(set_(["image"], KUBE_BENCH)), "kube-bench")],
         [("docker-hub", pod, set_(["image"], "docker.io/library/alpine:3.22")),
          ("short-name", pod, set_(["image"], "alpine:3.22")),
          ("lookalike-host", pod, set_(["image"], "127.0.0.1:30500.evil.example/library/alpine:3.22")),
@@ -216,6 +236,10 @@ CASES = {
          ("argocd-image-in-apps", pod, set_(["image"], ARGOCD)),
          ("other-image-in-argocd", pod, set_(["image"], "docker.io/library/alpine:3.22"), "argocd"),
          ("lookalike-repo-in-argocd", pod, set_(["image"], "quay.io/argoproj/argocd-evil:v1"), "argocd"),
+         ("kube-bench-image-in-apps", pod, kube_bench(set_(["image"], KUBE_BENCH))),
+         ("kube-bench-image-without-label", pod, set_(["image"], KUBE_BENCH), "kube-bench"),
+         ("other-image-as-kube-bench", pod, kube_bench(set_(["image"], "docker.io/library/alpine:3.22")), "kube-bench"),
+         ("kube-bench-image-by-tag", pod, kube_bench(set_(["image"], "docker.io/aquasec/kube-bench:v0.16.0")), "kube-bench"),
          ("allowed-image-untrusted-sidecar", pod, lambda s, m: (
              c0(s).update(image=ARGOCD),
              s["containers"].append(c0(s) | {"name": "sidecar", "image": "docker.io/library/alpine:3.22"})),

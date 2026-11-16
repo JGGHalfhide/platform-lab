@@ -48,9 +48,16 @@ kind: Job
 metadata:
   name: kube-bench
   namespace: kube-bench
+  # The label is what the kube-bench PolicyExceptions match (with the
+  # namespace); gitops/policies/exception-kube-bench.yaml.
+  labels:
+    app.kubernetes.io/name: kube-bench
 spec:
   backoffLimit: 0
   template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: kube-bench
     spec:
       serviceAccountName: kube-bench
       # The token is mounted explicitly below instead of automounted.
@@ -64,6 +71,12 @@ spec:
           # aquasec/kube-bench:v0.16.0
           image: docker.io/aquasec/kube-bench@sha256:75506f222d1eb6ce2a751a5533bdc0a3b54c898e2e49e7751d0ee22cfb862679
           command: ["kube-bench", "run", "--benchmark", "rke2-cis-1.9"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
           securityContext:
             # Needed to read host files with SELinux enforcing (runs as spc_t).
             privileged: true

@@ -1,0 +1,47 @@
+# kube-bench (`make bench`, scripts/kube-bench/) inspects the node's RKE2
+# configuration: it needs hostPID, read-only hostPath mounts of
+# /var/lib/rancher, /etc/rancher, /etc/passwd and /etc/group, and privileged
+# mode (spc_t, to read host files with SELinux enforcing). The Job's namespace
+# has the matching Pod Security exemption. The Job carries the
+# app.kubernetes.io/name label and resources, so require-labels,
+# require-resources and disallow-latest-tag (pinned digest) still apply.
+#
+# Both exceptions match only the labelled Job and its pods in the kube-bench
+# namespace, which exists only while `make bench` runs.
+apiVersion: policies.kyverno.io/v1
+kind: PolicyException
+metadata:
+  name: kube-bench-host-access
+  namespace: kyverno
+spec:
+  policyRefs:
+    - name: disallow-privileged-containers
+      kind: ValidatingPolicy
+    - name: disallow-host-path
+      kind: ValidatingPolicy
+    - name: pod-security-restricted
+      kind: ValidatingPolicy
+  matchConditions:
+    - name: kube-bench-job
+      expression: >-
+        object.metadata.namespace == 'kube-bench' &&
+        object.metadata.?labels.orValue({})[?'app.kubernetes.io/name'].orValue('') == 'kube-bench'
+---
+# Fine-grained: restrict-image-registries still runs; only the pinned
+# kube-bench repository is added (digest references only).
+apiVersion: policies.kyverno.io/v1
+kind: PolicyException
+metadata:
+  name: kube-bench-image
+  namespace: kyverno
+spec:
+  policyRefs:
+    - name: restrict-image-registries
+      kind: ValidatingPolicy
+  matchConditions:
+    - name: kube-bench-job
+      expression: >-
+        object.metadata.namespace == 'kube-bench' &&
+        object.metadata.?labels.orValue({})[?'app.kubernetes.io/name'].orValue('') == 'kube-bench'
+  allowedValues:
+    - "docker.io/aquasec/kube-bench@sha256:"
