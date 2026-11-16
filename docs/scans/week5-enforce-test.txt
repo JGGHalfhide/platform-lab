@@ -28,3 +28,7 @@ $ kubectl -n local-path-storage get events (helper pods)
 13m         Normal    Started             pod/helper-pod-delete-pvc-eede863b-e5ca-4cfe-97d0-f2cf4d0c2860   Container started
 10s         Normal    Started             pod/helper-pod-create-pvc-8c89bd1f-c1a8-462a-8798-20f136389a7a   Container started
 3s          Normal    Started             pod/helper-pod-delete-pvc-8c89bd1f-c1a8-462a-8798-20f136389a7a   Container started
+
+## 5. Pod taking a Secret through env (STIG V-242415): rejected (added 11/16 with disallow-secret-env)
+$ kubectl apply -f secret-env-pod.yaml   # env DB_PASSWORD from secretKeyRef
+Error from server: error when creating "STDIN": admission webhook "vpol.validate.kyverno.svc-fail" denied the request: Policy disallow-secret-env failed: Secrets must be mounted as files, not passed as environment variables (STIG V-242415): app
