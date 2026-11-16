@@ -1,5 +1,8 @@
 # Images come only from the platform's registries, where `make image` (and
-# Zarf, on the airgapped cluster) has scanned and signed them.
+# Zarf, on the airgapped cluster) has scanned and signed them. A
+# PolicyException can add exact repository prefixes through allowedValues
+# (exception-platform-bootstrap-images.yaml); the policy still runs for those
+# pods, so any other image is still rejected.
 apiVersion: policies.kyverno.io/v1
 kind: ValidatingPolicy
 metadata:
@@ -22,6 +25,14 @@ spec:
         apiVersions: [v1]
         operations: [CREATE, UPDATE]
         resources: [pods]
+    # RKE2's own components (managed by RKE2, outside admission: Kyverno's
+    # webhooks already skip kube-system). Keeps background reports to what
+    # this repo deploys.
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values: [kube-system]
   variables:
     - name: trusted
       expression: "['127.0.0.1:30500/', '127.0.0.1:31999/']"
@@ -31,7 +42,7 @@ spec:
         + object.spec.?initContainers.orValue([])
         + object.spec.?ephemeralContainers.orValue([]))
         .map(c, c.image)
-        .filter(i, !variables.trusted.exists(p, i.startsWith(p)))
+        .filter(i, !(variables.trusted + exceptions.allowedValues).exists(p, i.startsWith(p)))
   validations:
     - expression: size(variables.untrusted) == 0
       messageExpression: >-

@@ -20,6 +20,14 @@ spec:
         apiVersions: [v1]
         operations: [CREATE, UPDATE]
         resources: [pods]
+    # RKE2's own components (managed by RKE2, outside admission: Kyverno's
+    # webhooks already skip kube-system). Keeps background reports to what
+    # this repo deploys.
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values: [kube-system]
   variables:
     - name: containers
       expression: >-

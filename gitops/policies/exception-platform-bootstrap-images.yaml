@@ -1,0 +1,37 @@
+# Build cluster only: the platform's own components run their upstream
+# images. They start before the in-cluster registry exists (or are the
+# registry), so they cannot pull from it. On the airgapped cluster Zarf
+# rewrites every image to its registry and this exception matches nothing.
+#
+# Fine-grained: restrict-image-registries still evaluates these pods; only
+# the exact repositories below are added to its trusted list (each prefix
+# ends at the tag separator, so a look-alike repository does not match).
+apiVersion: policies.kyverno.io/v1
+kind: PolicyException
+metadata:
+  name: platform-bootstrap-images
+  namespace: kyverno
+spec:
+  policyRefs:
+    - name: restrict-image-registries
+      kind: ValidatingPolicy
+  matchConditions:
+    - name: platform-namespaces
+      expression: >-
+        object.metadata.namespace in ['argocd', 'zot', 'kyverno', 'local-path-storage']
+  allowedValues:
+    # argocd
+    - "quay.io/argoproj/argocd:"
+    - "ghcr.io/dexidp/dex:"
+    - "public.ecr.aws/docker/library/redis:"
+    # zot
+    - "ghcr.io/project-zot/zot:"
+    # kyverno
+    - "reg.kyverno.io/kyverno/kyverno:"
+    - "reg.kyverno.io/kyverno/kyvernopre:"
+    - "reg.kyverno.io/kyverno/background-controller:"
+    - "reg.kyverno.io/kyverno/cleanup-controller:"
+    - "reg.kyverno.io/kyverno/reports-controller:"
+    # local-path-storage (provisioner and its helper pods)
+    - "docker.io/rancher/local-path-provisioner:"
+    - "docker.io/library/busybox:"

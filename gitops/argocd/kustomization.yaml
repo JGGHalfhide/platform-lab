@@ -26,6 +26,8 @@ patches:
   - path: patches/token-argocd-notifications-controller.yaml
   - path: patches/token-argocd-redis.yaml
   - path: patches/token-argocd-server.yaml
+  # Kyverno require-resources: requests and memory limits for every container.
+  - path: patches/resources.yaml
   # RKE2's Traefik listens on host ports behind a ClusterIP Service, so it
   # never publishes a load-balancer address in Ingress status. Argo CD's
   # default Ingress check waits for one and stays Progressing; treat an

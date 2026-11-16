@@ -1,0 +1,23 @@
+# local-path-provisioner's helper pods create and delete volume directories
+# under /opt/local-path-provisioner on the node: they need a hostPath mount
+# and root. This matches the namespace's Pod Security exemption
+# (enforce=privileged, gitops/local-path-storage). The helper pod template
+# still sets a label, resources, seccomp and no privilege escalation, so the
+# other policies pass.
+apiVersion: policies.kyverno.io/v1
+kind: PolicyException
+metadata:
+  name: local-path-helper-pods
+  namespace: kyverno
+spec:
+  policyRefs:
+    - name: disallow-host-path
+      kind: ValidatingPolicy
+    - name: pod-security-restricted
+      kind: ValidatingPolicy
+  matchConditions:
+    - name: helper-pods
+      expression: >-
+        object.kind == 'Pod' &&
+        object.metadata.namespace == 'local-path-storage' &&
+        object.metadata.name.startsWith('helper-pod-')

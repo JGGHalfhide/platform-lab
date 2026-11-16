@@ -7,6 +7,8 @@ policies:
 - ../../../gitops/policies/disallow-host-path.yaml
 resources:
 - resources.yaml
+exceptions:
+- ../../../gitops/policies/exception-local-path-helper.yaml
 results:
 - policy: disallow-host-path
   resources:
@@ -23,3 +25,18 @@ results:
   - host-path-deploy
   kind: Deployment
   result: fail
+- policy: disallow-host-path
+  resources:
+  - helper-pod-create-pvc-other-ns
+  kind: Pod
+  result: fail
+- policy: disallow-host-path
+  resources:
+  - not-a-helper
+  kind: Pod
+  result: fail
+- policy: disallow-host-path
+  resources:
+  - helper-pod-create-pvc-1
+  kind: Pod
+  result: skip

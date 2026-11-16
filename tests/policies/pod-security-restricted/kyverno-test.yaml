@@ -7,6 +7,8 @@ policies:
 - ../../../gitops/policies/pod-security-restricted.yaml
 resources:
 - resources.yaml
+exceptions:
+- ../../../gitops/policies/exception-local-path-helper.yaml
 results:
 - policy: pod-security-restricted
   resources:
@@ -113,3 +115,13 @@ results:
   - host-network-deploy
   kind: Deployment
   result: fail
+- policy: pod-security-restricted
+  resources:
+  - root-not-helper
+  kind: Pod
+  result: fail
+- policy: pod-security-restricted
+  resources:
+  - helper-pod-delete-pvc-1
+  kind: Pod
+  result: skip

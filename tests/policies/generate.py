@@ -49,20 +49,21 @@ BASE = {
 }
 
 
-def pod(name, change=None):
+def pod(name, change=None, namespace="apps"):
     p = copy.deepcopy(BASE)
     p["metadata"]["name"] = name
+    p["metadata"]["namespace"] = namespace
     if change:
         change(p["spec"], p["metadata"])
     return p
 
 
-def deployment(name, change=None):
-    p = pod(name, change)
+def deployment(name, change=None, namespace="apps"):
+    p = pod(name, change, namespace)
     return {
         "apiVersion": "apps/v1",
         "kind": "Deployment",
-        "metadata": {"name": name, "namespace": "apps",
+        "metadata": {"name": name, "namespace": namespace,
                      "labels": {"app.kubernetes.io/name": "web"}},
         "spec": {
             "replicas": 1,
@@ -106,7 +107,16 @@ def add_volume(vol):
     return change
 
 
-# policy -> (passing cases, failing cases); each case is (name, kind, change)
+# policy -> (passing, failing[, skipped]); each case is
+# (name, kind, change[, namespace]). Skipped: a PolicyException applies.
+EXCEPTIONS = {
+    "restrict-image-registries": ["exception-platform-bootstrap-images.yaml"],
+    "disallow-host-path": ["exception-local-path-helper.yaml"],
+    "pod-security-restricted": ["exception-local-path-helper.yaml"],
+}
+HOST_PATH = {"name": "data", "hostPath": {"path": "/opt/local-path-provisioner"}}
+ARGOCD = "quay.io/argoproj/argocd:v3.6.1"
+
 CASES = {
     "disallow-privileged-containers": (
         [("compliant", pod, None)],
@@ -116,7 +126,11 @@ CASES = {
     "disallow-host-path": (
         [("compliant", pod, None)],
         [("host-path", pod, add_volume({"name": "host", "hostPath": {"path": "/etc"}})),
-         ("host-path-deploy", deployment, add_volume({"name": "host", "hostPath": {"path": "/etc"}}))],
+         ("host-path-deploy", deployment, add_volume({"name": "host", "hostPath": {"path": "/etc"}})),
+         # the helper exception is scoped to its namespace and name prefix
+         ("helper-pod-create-pvc-other-ns", pod, add_volume(HOST_PATH)),
+         ("not-a-helper", pod, add_volume(HOST_PATH), "local-path-storage")],
+        [("helper-pod-create-pvc-1", pod, add_volume(HOST_PATH), "local-path-storage")],
     ),
     "pod-security-restricted": (
         [("compliant", pod, None),
@@ -141,7 +155,9 @@ CASES = {
          ("proc-mount", pod, set_(["securityContext", "procMount"], "Unmasked")),
          ("unsafe-sysctl", pod, set_(["securityContext", "sysctls"], [{"name": "kernel.msgmax", "value": "1"}], "pod")),
          ("nfs-volume", pod, add_volume({"name": "nfs", "nfs": {"server": "nfs.example", "path": "/"}})),
-         ("host-network-deploy", deployment, set_(["hostNetwork"], True, "pod"))],
+         ("host-network-deploy", deployment, set_(["hostNetwork"], True, "pod")),
+         ("root-not-helper", pod, set_(["securityContext", "runAsNonRoot"], False, "pod"), "local-path-storage")],
+        [("helper-pod-delete-pvc-1", pod, set_(["securityContext", "runAsNonRoot"], False, "pod"), "local-path-storage")],
     ),
     "disallow-latest-tag": (
         [("compliant", pod, None),
@@ -173,26 +189,38 @@ CASES = {
     ),
     "restrict-image-registries": (
         [("compliant", pod, None),
-         ("zarf-registry", pod, set_(["image"], "127.0.0.1:31999/library/alpine:3.22"))],
+         ("zarf-registry", pod, set_(["image"], "127.0.0.1:31999/library/alpine:3.22")),
+         # platform-bootstrap-images exception: listed repos, platform namespaces
+         ("argocd-upstream", pod, set_(["image"], ARGOCD), "argocd"),
+         ("zot-upstream", pod, set_(["image"], "ghcr.io/project-zot/zot:v2.1.23"), "zot")],
         [("docker-hub", pod, set_(["image"], "docker.io/library/alpine:3.22")),
          ("short-name", pod, set_(["image"], "alpine:3.22")),
          ("lookalike-host", pod, set_(["image"], "127.0.0.1:30500.evil.example/library/alpine:3.22")),
          ("other-port", pod, set_(["image"], "127.0.0.1:5000/library/alpine:3.22")),
          ("init-untrusted", pod, lambda s, m: s.update(initContainers=[
              c0(s) | {"name": "init", "image": "docker.io/library/busybox:1.37.0"}])),
-         ("docker-hub-deploy", deployment, set_(["image"], "docker.io/library/alpine:3.22"))],
+         ("docker-hub-deploy", deployment, set_(["image"], "docker.io/library/alpine:3.22")),
+         # the exception adds exact repositories only, in its namespaces only
+         ("argocd-image-in-apps", pod, set_(["image"], ARGOCD)),
+         ("other-image-in-argocd", pod, set_(["image"], "docker.io/library/alpine:3.22"), "argocd"),
+         ("lookalike-repo-in-argocd", pod, set_(["image"], "quay.io/argoproj/argocd-evil:v1"), "argocd"),
+         ("allowed-image-untrusted-sidecar", pod, lambda s, m: (
+             c0(s).update(image=ARGOCD),
+             s["containers"].append(c0(s) | {"name": "sidecar", "image": "docker.io/library/alpine:3.22"})),
+          "argocd")],
     ),
 }
 
 
 def main():
-    for policy, (passing, failing) in CASES.items():
+    for policy, groups in CASES.items():
+        passing, failing, skipped = (list(groups) + [[]])[:3]
         d = HERE / policy
         d.mkdir(exist_ok=True)
         docs, results = [], []
-        for expected, cases in (("pass", passing), ("fail", failing)):
-            for name, kind, change in cases:
-                doc = kind(name, change)
+        for expected, cases in (("pass", passing), ("fail", failing), ("skip", skipped)):
+            for name, kind, change, *ns in cases:
+                doc = kind(name, change, *ns)
                 if doc["kind"] == "Deployment":
                     doc["spec"]["template"]["metadata"].pop("name")
                 docs.append(doc)
@@ -207,12 +235,14 @@ def main():
             "metadata": {"name": policy},
             "policies": [f"../../../gitops/policies/{policy}.yaml"],
             "resources": ["resources.yaml"],
+            **({"exceptions": [f"../../../gitops/policies/{e}" for e in EXCEPTIONS[policy]]}
+               if policy in EXCEPTIONS else {}),
             "results": results,
         }
         (d / "kyverno-test.yaml").write_text(
             "# Generated by tests/policies/generate.py; do not edit.\n"
             + yaml.safe_dump(test, sort_keys=False))
-        print(f"{policy}: {len(passing)} pass, {len(failing)} fail cases")
+        print(f"{policy}: {len(passing)} pass, {len(failing)} fail, {len(skipped)} skip cases")
 
 
 if __name__ == "__main__":
