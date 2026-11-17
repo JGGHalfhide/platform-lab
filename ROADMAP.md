@@ -221,15 +221,15 @@ Week 5 in ROADMAP.md. Write the Kyverno policy set under gitops/policies/ with k
 
 Goal: the same platform runs on the iMac cluster with no internet access.
 
-- [ ] iMac: Rocky Linux 9 installed, base and hardening roles applied (adjust inventory), single-node RKE2 installed from airgap artifacts (RKE2 images tarball + install script staged over scp). Decided 11/16: staged RPMs + images tarball instead of install.sh (same layout as the build node). `airgap_servers` group, `make airgap-stage` / `make airgap-up`. Rehearsed 11/16 on the airgap-rehearsal VM (docs/airgap-runbook.md); iMac run pending.
+- [x] iMac: Rocky Linux 9 installed, base and hardening roles applied (adjust inventory), single-node RKE2 installed from airgap artifacts (RKE2 images tarball + install script staged over scp). Decided 11/16: staged RPMs + images tarball instead of install.sh (same layout as the build node). `airgap_servers` group, `make airgap-stage` / `make airgap-up`. Done on the iMac 11/17 (rehearsed 11/16 on the airgap-rehearsal VM).
 - [x] Zarf installed on the build host (`zarf version` recorded): v0.89.0 (11/16; 1.0.0 was days old)
 - [x] Zarf package definitions under `zarf/` for: platform components, Kyverno policies, sample app (11/16: zarf/platform, zarf/policies, zarf/sample-app; shared sources with gitops/)
-- [ ] `zarf package create` on the connected host; transfer the package file to the iMac via scp/USB. Create done 11/16 (`make airgap-packages`, signed with the lab cosign key); transfer by `make airgap-deploy`. Rehearsed 11/16 on the airgap-rehearsal VM (docs/airgap-runbook.md); iMac run pending.
-- [ ] Disconnect: firewall rule blocking egress on the iMac; prove with a failing `curl` (`make airgap-disconnect`, firewalld policies). Rehearsed 11/16 on the airgap-rehearsal VM (docs/airgap-runbook.md); iMac run pending.
-- [ ] `zarf init` and `zarf package deploy` on the iMac with the network blocked (`make airgap-deploy`). Rehearsed 11/16 on the airgap-rehearsal VM (docs/airgap-runbook.md); iMac run pending.
-- [ ] Sample app runs; unsigned image still rejected by policy (tests/airgap/). Rehearsed 11/16 on the airgap-rehearsal VM (docs/airgap-runbook.md); iMac run pending.
-- [ ] `docs/airgap-runbook.md`: exact step list (drafted 11/16 from the rehearsal; final after the iMac run)
-- [ ] Tag `v0.6`; publish Post 3 (airgap deploy)
+- [x] `zarf package create` on the connected host; transfer the package file to the iMac via scp/USB. Create done 11/16 (`make airgap-packages`, signed with the lab cosign key); transfer by `make airgap-deploy`. Done on the iMac 11/17 (rehearsed 11/16 on the airgap-rehearsal VM).
+- [x] Disconnect: firewall rule blocking egress on the iMac; prove with a failing `curl` (`make airgap-disconnect`, firewalld policies). Done on the iMac 11/17 (rehearsed 11/16 on the airgap-rehearsal VM).
+- [x] `zarf init` and `zarf package deploy` on the iMac with the network blocked (`make airgap-deploy`). Done on the iMac 11/17 (rehearsed 11/16 on the airgap-rehearsal VM).
+- [x] Sample app runs; unsigned image still rejected by policy (tests/airgap/). Done on the iMac 11/17 (rehearsed 11/16 on the airgap-rehearsal VM).
+- [x] `docs/airgap-runbook.md`: exact step list (11/17: rehearsal and iMac results)
+- [ ] Tag `v0.6`; publish Post 3 (airgap deploy) (v0.6 tagged 11/17; Post 3 is the user's)
 
 Acceptance: platform and sample app come up on the iMac with egress blocked and no image pull errors.
 

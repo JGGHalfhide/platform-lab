@@ -142,14 +142,19 @@ Done (11/16): full flow proven on the rehearsal VM with egress blocked: 0 pull e
 verified via the Zarf registry, unsigned rejected (docs/airgap-runbook.md). Sample app in
 gitops/sample-app (podinfo + PostgreSQL, sample-db Secret from Vault via sample_app_secret role);
 postgres gosu CVEs excepted in .trivyignore.yaml. Kyverno values in gitops/values/kyverno.yaml.
-Next: install Rocky 9 on the iMac (runbook section 1), then `make inventory AIRGAP_IP=<ip>` and
-repeat the runbook; ask before blocking the iMac's egress. Then tag v0.6.
+Done (11/17): iMac (airgap-node-01, i5-4570R, 8 GB, Rocky 9.9, LVM with STIG partitions) on a
+direct cable to the build host: `make airgap-link-share` (NM shared on eno1, 192.168.50.0/24,
+iMac reserved at 192.168.50.195; NEVER touch enp3s0 = Pi wake-on-LAN). airgap-up 9m54s, repeat
+changed=0. iMac has no /etc/default/grub: hardening skips those tasks and never runs grub2-mkconfig
+without it. Egress blocked twice (`make airgap-link-cut` on host, `make airgap-disconnect`);
+airgap-deploy 11m20s: 0 pull errors, signed images verified, unsigned rejected; repeat changed=0.
+Week 6 tagged v0.6 (tag also contains the early Week 7 commits). Post 3 is the user's to write.
+The iMac stays cut off; `make airgap-link-uncut` + `make airgap-reconnect` reopen it.
 Week 7 started early (11/16, iMac not ready): build VM 12 GiB; etcd snapshots every 6 h
 (`make etcd-snapshot SNAPSHOT=...`); Garage S3 store on the build host (`make backup-store`,
 192.168.122.1:3900, bucket velero); Velero 1.18.4 via Argo CD (privileged hosting pods for
 SELinux, scoped exceptions); local-path now creates `local` volumes (helper runs spc_t).
 Velero drill: backup 20 s, restore 22 s, data verified (docs/recovery.md).
-Before the iMac run: `make airgap-stage` again (local-path manifest changed); Week 6 packages unchanged.
 Week 7 left: monitoring stack + dashboards (+ Zarf package), etcd restore drill (ask first), tag v0.7.
 GitHub Actions item deferred to Week 8. Post 2 is the user's to write.
 Reminders for Week 8 (in ROADMAP.md): circle back to the deferred Week 4 GitHub Actions

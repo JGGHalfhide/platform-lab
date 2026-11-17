@@ -320,6 +320,14 @@ Differences from the plan, all now in the repo:
 | `make airgap-up` run 2 | 9m54s, 52 changes, one reboot (kernel arguments, audit rules); node Ready, 0 image pull errors |
 | `make airgap-up` run 3 | 2m18s, `changed=0` |
 | Running kernel | `fips=1 ... audit=1 audit_backlog_limit=8192 init_on_free=1 page_poison=1 pti=on vsyscall=none`, SELinux enforcing |
+| `make airgap-link-cut` | build host rejects anything from `eno1` beyond the link (nft table `airgap_link`); DHCP and SSH over the link kept |
+| `make airgap-disconnect` | firewalld policies on the iMac; `curl https://github.com` and `dnf makecache`: `No route to host`; the build host still reachable |
+| `make airgap-deploy` (egress blocked) | 11m20s (most of it copying 1.8 GB over the link); init, platform, policies, sample-app deployed and verified against the lab key |
+| Pods | all Running; **0 image pull errors** |
+| Sample app images | `127.0.0.1:31999/stefanprodan/podinfo@sha256:fa2f27c1...`, `127.0.0.1:31999/library/postgres@sha256:a77aa70e...` (signed digests); PostgreSQL accepting connections |
+| Policy reports | 193 pass, 0 fail (25 skipped by the scoped exceptions) |
+| Unsigned image test | rejected: `image is not signed with the platform-lab cosign key` (image present in the Zarf registry) |
+| `make airgap-deploy` repeat | 3m45s, `changed=0` |
 
-Next on the iMac: egress block (`make airgap-link-cut`, then
-`make airgap-disconnect`), then `make airgap-deploy`.
+Week 6 acceptance met on the iMac (11/17): platform and sample app up with
+egress blocked and no image pull errors.
