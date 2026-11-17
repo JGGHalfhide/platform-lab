@@ -21,6 +21,10 @@ patches:
           pod-security.kubernetes.io/enforce: privileged
           pod-security.kubernetes.io/warn: restricted
           pod-security.kubernetes.io/audit: restricted
+          # Airgapped cluster: local-path starts before `zarf init` with
+          # preloaded upstream images; the Zarf agent must not rewrite its
+          # helper pods to the Zarf registry. No effect on the build cluster.
+          zarf.dev/agent: ignore
         annotations:
           platform-lab/pss-exception: "helper pods mount hostPath /opt/local-path-provisioner"
   - target:

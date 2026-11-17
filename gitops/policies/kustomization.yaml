@@ -1,0 +1,18 @@
+# Kyverno policies and exceptions. Argo CD renders this directory with
+# kustomize on the build cluster; zarf/policies packages the same build for the
+# airgapped cluster. New files must be listed here.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - disallow-host-path.yaml
+  - disallow-latest-tag.yaml
+  - disallow-privileged-containers.yaml
+  - disallow-secret-env.yaml
+  - exception-kube-bench.yaml
+  - exception-local-path-helper.yaml
+  - exception-platform-bootstrap-images.yaml
+  - pod-security-restricted.yaml
+  - require-labels.yaml
+  - require-resources.yaml
+  - restrict-image-registries.yaml
+  - verify-platform-images.yaml

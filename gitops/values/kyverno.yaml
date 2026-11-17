@@ -1,0 +1,37 @@
+# Kyverno chart values (chart 3.9.2), shared by the build cluster (Argo CD,
+# gitops/apps/kyverno.yaml) and the airgapped cluster (zarf/platform).
+features:
+  policyExceptions:
+    enabled: true
+    namespace: kyverno
+crds:
+  migration:
+    enabled: false
+webhooksCleanup:
+  serviceAccount:
+    automountServiceAccountToken: false
+# Helm test pods; pinned so nothing pulls :latest (airgap).
+test:
+  automountServiceAccountToken: false
+  image:
+    tag: v1.19.2
+admissionController:
+  replicas: 1
+  rbac:
+    serviceAccount:
+      automountServiceAccountToken: false
+backgroundController:
+  replicas: 1
+  rbac:
+    serviceAccount:
+      automountServiceAccountToken: false
+cleanupController:
+  replicas: 1
+  rbac:
+    serviceAccount:
+      automountServiceAccountToken: false
+reportsController:
+  replicas: 1
+  rbac:
+    serviceAccount:
+      automountServiceAccountToken: false

@@ -1,7 +1,10 @@
-# Build cluster only: the platform's own components run their upstream
-# images. They start before the in-cluster registry exists (or are the
-# registry), so they cannot pull from it. On the airgapped cluster Zarf
-# rewrites every image to its registry and this exception matches nothing.
+# The platform's own components run their upstream images. They start
+# before the in-cluster registry exists (or are the registry), so they
+# cannot pull from it. On the airgapped cluster Zarf rewrites every image to
+# its registry, except local-path-storage: it starts with RKE2 from
+# preloaded images before `zarf init` (the Zarf registry needs its
+# StorageClass) and its namespace is excluded from the Zarf agent, so only
+# its two entries match there.
 #
 # Fine-grained: restrict-image-registries still evaluates these pods; only
 # the exact repositories below are added to its trusted list (each prefix

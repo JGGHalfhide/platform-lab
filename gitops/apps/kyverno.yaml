@@ -11,6 +11,7 @@
 #   ServiceAccount is missing as non-compliant. Its ClusterRole uses
 #   wildcards (5.1.3). Re-enable for one sync if upgrading in place.
 # - Policies live in gitops/policies/ (their own Application).
+# - Chart values: gitops/values/kyverno.yaml (shared with zarf/platform).
 # - PolicyExceptions are enabled, but only in the kyverno namespace, which
 #   only Argo CD (from gitops/policies/) writes to.
 apiVersion: argoproj.io/v1alpha1
@@ -25,45 +26,13 @@ spec:
       chart: kyverno
       targetRevision: 3.9.2
       helm:
-        valuesObject:
-          features:
-            policyExceptions:
-              enabled: true
-              namespace: kyverno
-          crds:
-            migration:
-              enabled: false
-          webhooksCleanup:
-            serviceAccount:
-              automountServiceAccountToken: false
-          # Helm test pods; pinned so nothing pulls :latest (airgap).
-          test:
-            automountServiceAccountToken: false
-            image:
-              tag: v1.19.2
-          admissionController:
-            replicas: 1
-            rbac:
-              serviceAccount:
-                automountServiceAccountToken: false
-          backgroundController:
-            replicas: 1
-            rbac:
-              serviceAccount:
-                automountServiceAccountToken: false
-          cleanupController:
-            replicas: 1
-            rbac:
-              serviceAccount:
-                automountServiceAccountToken: false
-          reportsController:
-            replicas: 1
-            rbac:
-              serviceAccount:
-                automountServiceAccountToken: false
+        valueFiles:
+          - $repo/gitops/values/kyverno.yaml
+    # Also the source of the chart values ($repo).
     - repoURL: https://github.com/JGGHalfhide/platform-lab.git
       targetRevision: main
       path: gitops/kyverno
+      ref: repo
   destination:
     server: https://kubernetes.default.svc
     namespace: kyverno
