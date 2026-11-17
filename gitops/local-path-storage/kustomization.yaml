@@ -37,6 +37,10 @@ patches:
         name: local-path
         annotations:
           storageclass.kubernetes.io/is-default-class: "true"
+          # `local` PersistentVolumes instead of the default `hostPath`:
+          # Velero's file-system backup skips hostPath volumes (Week 7).
+          # Applies to new volumes only.
+          defaultVolumeType: local
   # CIS 5.1.6: no token automount; the provisioner gets a projected one.
   - target:
       kind: ServiceAccount
