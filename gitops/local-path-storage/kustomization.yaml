@@ -114,8 +114,9 @@ patches:
   # directories get the sticky bit: they must be world-writable for
   # non-root workloads, and the STIG requires sticky world-writable dirs.
   # Label, resources, seccomp and no privilege escalation for the Kyverno
-  # policies; hostPath and root stay (they create and delete the volume
-  # directories), covered by the helper-pod PolicyException.
+  # policies; hostPath, root and the spc_t SELinux type stay (they create and
+  # delete the volume directories), covered by the helper-pod
+  # PolicyException.
   - target:
       kind: ConfigMap
       name: local-path-config
@@ -157,3 +158,8 @@ patches:
                 allowPrivilegeEscalation: false
                 seccompProfile:
                   type: RuntimeDefault
+                # `local` volumes are relabelled with their pod's own MCS
+                # categories, so a helper with other categories cannot
+                # remove them; spc_t can (not privileged).
+                seLinuxOptions:
+                  type: spc_t
