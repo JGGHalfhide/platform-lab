@@ -73,3 +73,39 @@ variable "ssh_public_key_path" {
   type        = string
   default     = "~/.ssh/platform-lab_ecdsa.pub"
 }
+
+variable "airgap_rehearsal" {
+  description = "Create the airgap rehearsal VM (a stand-in for the iMac target)."
+  type        = bool
+  default     = false
+}
+
+variable "rehearsal_vm_name" {
+  description = "Name and hostname of the airgap rehearsal VM."
+  type        = string
+  default     = "airgap-rehearsal"
+}
+
+variable "rehearsal_mac_address" {
+  description = "MAC address of the rehearsal VM's NIC; scripts/host-bootstrap.sh reserves its DHCP address (REHEARSAL_MAC in the Makefile)."
+  type        = string
+  default     = "52:54:00:70:6c:02"
+}
+
+variable "rehearsal_vcpus" {
+  description = "Virtual CPUs for the rehearsal VM."
+  type        = number
+  default     = 4
+}
+
+variable "rehearsal_memory_mib" {
+  description = "Memory in MiB for the rehearsal VM; matches the iMac (8 GB)."
+  type        = number
+  default     = 8192
+}
+
+variable "rehearsal_disk_size_gib" {
+  description = "Root disk size in GiB for the rehearsal VM (thin qcow2)."
+  type        = number
+  default     = 60
+}

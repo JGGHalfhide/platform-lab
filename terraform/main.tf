@@ -2,143 +2,58 @@ locals {
   ssh_public_key = trimspace(file(pathexpand(var.ssh_public_key_path)))
 }
 
-# Copy-on-write root disk backed by the Rocky base image.
-resource "libvirt_volume" "root" {
-  name          = "${var.vm_name}-root.qcow2"
-  pool          = var.pool
-  capacity      = var.disk_size_gib
-  capacity_unit = "GiB"
+# Build cluster node (connected).
+module "build_node" {
+  source = "./modules/rocky-vm"
 
-  target = {
-    format = {
-      type = "qcow2"
-    }
-  }
-
-  backing_store = {
-    path = var.base_image_path
-    format = {
-      type = "qcow2"
-    }
-  }
+  name            = var.vm_name
+  mac_address     = var.mac_address
+  vcpus           = var.vcpus
+  memory_mib      = var.memory_mib
+  disk_size_gib   = var.disk_size_gib
+  pool            = var.pool
+  base_image_path = var.base_image_path
+  network         = var.network
+  ssh_user        = var.ssh_user
+  ssh_public_key  = local.ssh_public_key
 }
 
-resource "libvirt_cloudinit_disk" "seed" {
-  name = "${var.vm_name}-seed"
+# Stand-in for the disconnected iMac, sized like it (8 GB). Used to rehearse
+# docs/airgap-runbook.md before running it on the iMac; egress is blocked on
+# the guest by the same step as on the iMac. Off unless airgap_rehearsal = true.
+module "airgap_rehearsal" {
+  source = "./modules/rocky-vm"
+  count  = var.airgap_rehearsal ? 1 : 0
 
-  user_data = templatefile("${path.module}/templates/user-data.yaml.tftpl", {
-    ssh_user       = var.ssh_user
-    ssh_public_key = local.ssh_public_key
-  })
-
-  meta_data = yamlencode({
-    instance-id    = var.vm_name
-    local-hostname = var.vm_name
-  })
+  name            = var.rehearsal_vm_name
+  mac_address     = var.rehearsal_mac_address
+  vcpus           = var.rehearsal_vcpus
+  memory_mib      = var.rehearsal_memory_mib
+  disk_size_gib   = var.rehearsal_disk_size_gib
+  pool            = var.pool
+  base_image_path = var.base_image_path
+  network         = var.network
+  ssh_user        = var.ssh_user
+  ssh_public_key  = local.ssh_public_key
 }
 
-resource "libvirt_volume" "seed" {
-  name = "${var.vm_name}-seed.iso"
-  pool = var.pool
-
-  create = {
-    content = {
-      url = libvirt_cloudinit_disk.seed.path
-    }
-  }
+# The build node's resources moved into the module (11/16); no rebuild.
+moved {
+  from = libvirt_volume.root
+  to   = module.build_node.libvirt_volume.root
 }
 
-resource "libvirt_domain" "node" {
-  name        = var.vm_name
-  type        = "kvm"
-  vcpu        = var.vcpus
-  memory      = var.memory_mib
-  memory_unit = "MiB"
-  running     = true
-
-  # The 0.9 provider emits no <features> by default, which starts q35 with
-  # acpi=off; the guest then can't enumerate its PCIe devices and never boots.
-  features = {
-    acpi = true
-    apic = {}
-  }
-
-  cpu = {
-    mode = "host-passthrough"
-  }
-
-  os = {
-    type         = "hvm"
-    type_arch    = "x86_64"
-    type_machine = "q35"
-  }
-
-  devices = {
-    disks = [
-      {
-        source = {
-          volume = {
-            pool   = libvirt_volume.root.pool
-            volume = libvirt_volume.root.name
-          }
-        }
-        target = {
-          dev = "vda"
-          bus = "virtio"
-        }
-        driver = {
-          type = "qcow2"
-        }
-      },
-      {
-        device = "cdrom"
-        source = {
-          volume = {
-            pool   = libvirt_volume.seed.pool
-            volume = libvirt_volume.seed.name
-          }
-        }
-        target = {
-          dev = "sda"
-          bus = "sata"
-        }
-      },
-    ]
-
-    interfaces = [
-      {
-        model = {
-          type = "virtio"
-        }
-        # Fixed MAC so the DHCP reservation made by scripts/host-bootstrap.sh
-        # gives the node the same address on every rebuild.
-        mac = {
-          address = var.mac_address
-        }
-        source = {
-          network = {
-            network = var.network
-          }
-        }
-        wait_for_ip = {
-          source  = "lease"
-          timeout = 300
-        }
-      },
-    ]
-
-    graphics = [
-      {
-        vnc = {
-          auto_port = true
-          listen    = "127.0.0.1"
-        }
-      },
-    ]
-  }
+moved {
+  from = libvirt_cloudinit_disk.seed
+  to   = module.build_node.libvirt_cloudinit_disk.seed
 }
 
-data "libvirt_domain_interface_addresses" "node" {
-  domain = libvirt_domain.node.name
-  source = "lease"
+moved {
+  from = libvirt_volume.seed
+  to   = module.build_node.libvirt_volume.seed
+}
+
+moved {
+  from = libvirt_domain.node
+  to   = module.build_node.libvirt_domain.node
 }

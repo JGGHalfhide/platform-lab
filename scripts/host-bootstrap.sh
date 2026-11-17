@@ -13,7 +13,7 @@ NETWORK="${NETWORK:-default}"
 NODE_NAME="${NODE_NAME:-build-node-01}"
 NODE_MAC="${NODE_MAC:-52:54:00:70:6c:01}"
 NODE_IP="${NODE_IP:-192.168.122.10}"
-REGISTRY_HOST="${REGISTRY_HOST:-registry.platform-lab.internal}"
+REGISTRY_HOST="${REGISTRY_HOST-registry.platform-lab.internal}"
 
 ROCKY_BASE_URL="https://dl.rockylinux.org/pub/rocky/9/images/x86_64"
 ROCKY_IMAGE="${ROCKY_IMAGE:-Rocky-9-GenericCloud-Base-9.8-20260525.0.x86_64.qcow2}"
@@ -54,7 +54,9 @@ fi
 # --- hosts entry ------------------------------------------------------------
 # The registry is reached through the node's Traefik ingress. This is the one
 # step that needs root on the build host; it only runs when the line is missing.
-if ! grep -qE "^$NODE_IP[[:space:]]+$REGISTRY_HOST([[:space:]]|\$)" /etc/hosts; then
+# REGISTRY_HOST= (empty) skips it, for nodes that host no registry (the airgap
+# rehearsal VM).
+if [[ -n "$REGISTRY_HOST" ]] && ! grep -qE "^$NODE_IP[[:space:]]+$REGISTRY_HOST([[:space:]]|\$)" /etc/hosts; then
   if grep -qE "[[:space:]]$REGISTRY_HOST([[:space:]]|\$)" /etc/hosts; then
     echo "/etc/hosts maps $REGISTRY_HOST to another address; fix it by hand" >&2
     exit 1

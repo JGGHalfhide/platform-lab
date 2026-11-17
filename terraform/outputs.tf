@@ -1,17 +1,14 @@
-locals {
-  vm_ip = one(flatten([
-    for iface in data.libvirt_domain_interface_addresses.node.interfaces : [
-      for a in iface.addrs : a.addr if a.type == "ipv4"
-    ]
-  ]))
-}
-
 output "vm_ip" {
-  description = "IPv4 address of the VM from the libvirt DHCP lease."
-  value       = local.vm_ip
+  description = "IPv4 address of the build node from the libvirt DHCP lease."
+  value       = module.build_node.ip
 }
 
 output "ssh_command" {
-  description = "SSH command for the VM."
-  value       = "ssh ${var.ssh_user}@${local.vm_ip}"
+  description = "SSH command for the build node."
+  value       = "ssh ${var.ssh_user}@${module.build_node.ip}"
+}
+
+output "rehearsal_ip" {
+  description = "IPv4 address of the airgap rehearsal VM, or null when airgap_rehearsal is false."
+  value       = one(module.airgap_rehearsal[*].ip)
 }
