@@ -155,7 +155,14 @@ Week 7 started early (11/16, iMac not ready): build VM 12 GiB; etcd snapshots ev
 192.168.122.1:3900, bucket velero); Velero 1.18.4 via Argo CD (privileged hosting pods for
 SELinux, scoped exceptions); local-path now creates `local` volumes (helper runs spc_t).
 Velero drill: backup 20 s, restore 22 s, data verified (docs/recovery.md).
-Week 7 left: monitoring stack + dashboards (+ Zarf package), etcd restore drill (ask first), tag v0.7.
+Done (11/17): kube-prometheus-stack 92.17.0, Loki 7.5.0 (single binary, filesystem), Alloy 1.15.0
+(logs via the API, no hostPath) via Argo CD; node-exporter alone in monitoring-node (spc_t for
+/proc/1/mountinfo, PolicyException node-exporter); Grafana admin from Vault via $__file{}
+(grafana_admin role); etcd metrics :2381 (RKE2 etcd-expose-metrics, not opened in firewalld);
+CoreDNS NetworkPolicy; dashboards node/etcd/policy-reports in gitops/monitoring/dashboards;
+13/13 targets up; kube-bench 80/1 (docs/observability.md).
+Week 7 left: Zarf package for monitoring on the iMac, etcd restore drill (ask first),
+finish docs/recovery.md, tag v0.7.
 GitHub Actions item deferred to Week 8. Post 2 is the user's to write.
 Reminders for Week 8 (in ROADMAP.md): circle back to the deferred Week 4 GitHub Actions
 workflow; remind the user about docs/stack.md (full tech stack spec with each tool's use
