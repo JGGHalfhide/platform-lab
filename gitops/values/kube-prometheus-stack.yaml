@@ -199,6 +199,11 @@ prometheus-node-exporter:
     readOnlyRootFilesystem: true
     capabilities:
       drop: ["ALL"]
+    # The filesystem collector reads the host's /proc/1/mountinfo, which
+    # SELinux denies to container_t (init_t's /proc entries); spc_t can read
+    # it. Not privileged; same pattern as local-path's helper pods.
+    seLinuxOptions:
+      type: spc_t
 
 grafana:
   testFramework:

@@ -1,6 +1,7 @@
-# node-exporter reads node metrics with host network, host PID and read-only
-# hostPath mounts of /proc, /sys and /, which disallow-host-path and the
-# restricted Pod Security policy reject. This matches the namespace's Pod
+# node-exporter reads node metrics with host network, host PID, read-only
+# hostPath mounts of /proc, /sys and /, and the spc_t SELinux type (to read
+# the host's /proc/1/mountinfo), which disallow-host-path and the restricted
+# Pod Security policy reject. This matches the namespace's Pod
 # Security exemption (enforce=privileged, gitops/monitoring/namespaces.yaml).
 # It runs as non-root, with no capabilities, no privilege escalation and a
 # read-only root, so the other policies still pass. Only node-exporter, in

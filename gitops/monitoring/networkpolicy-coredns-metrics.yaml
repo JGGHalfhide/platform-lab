@@ -1,0 +1,25 @@
+# RKE2's CIS profile adds NetworkPolicies to kube-system that admit traffic
+# only from inside kube-system, plus DNS (53) to CoreDNS from anywhere.
+# This adds one narrow allowance: Prometheus (monitoring namespace) to
+# CoreDNS's metrics port 9153. RKE2's own policies stay as they are.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-prometheus-coredns-metrics
+  namespace: kube-system
+spec:
+  podSelector:
+    matchLabels:
+      k8s-app: kube-dns
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+      ports:
+        - protocol: TCP
+          port: 9153

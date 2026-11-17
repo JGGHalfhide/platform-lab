@@ -226,7 +226,8 @@ CASES = {
          ("kube-bench-host-pid", pod, kube_bench(set_(["hostPID"], True, "pod")), "kube-bench"),
          ("velero-node-agent-spc-t", pod, node_agent(set_(["securityContext", "seLinuxOptions", "type"], "spc_t")), "velero"),
          ("velero-hosting-pod-root", pod, velero_hosting_pod(set_(["securityContext", "runAsNonRoot"], False, "pod")), "velero"),
-         ("node-exporter-host-network", pod, node_exporter(set_(["hostNetwork"], True, "pod")), "monitoring-node")],
+         ("node-exporter-host-network", pod, node_exporter(set_(["hostNetwork"], True, "pod")), "monitoring-node"),
+         ("node-exporter-spc-t", pod, node_exporter(set_(["securityContext", "seLinuxOptions", "type"], "spc_t")), "monitoring-node")],
     ),
     "disallow-latest-tag": (
         [("compliant", pod, None),

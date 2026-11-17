@@ -163,3 +163,8 @@ results:
   - node-exporter-host-network
   kind: Pod
   result: skip
+- policy: pod-security-restricted
+  resources:
+  - node-exporter-spc-t
+  kind: Pod
+  result: skip
