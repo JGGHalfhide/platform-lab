@@ -6,6 +6,9 @@ base_packages:
   - chrony
   - firewalld
   - policycoreutils-python-utils
+  # Ansible's SELinux modules need it. The cloud image ships it; a minimal
+  # bare-metal install (the iMac) does not.
+  - python3-libselinux
 
 # Ports opened in the default zone for RKE2 server nodes.
 base_firewall_zone: public

@@ -282,9 +282,44 @@ Found during the rehearsal and fixed in the repo:
   argument; the flag must be `--verify=always`.
 - Zarf lists a failed deploy at its version; the role reads component status.
 
-### iMac
+### iMac (11/17)
 
-Not yet run. Expected differences from the rehearsal: bare-metal LVM layout
-(the six STIG partition rules should pass, so they can leave the exception
-list for that host), the real LAN as the allowed egress network, and an
-`AIRGAP_IP` for `make inventory`.
+Hardware: iMac with an Intel Core i5-4570R (x86-64-v2, SSE4.2), 8 GB, 1 TB
+disk; Rocky Linux 9.9 minimal from USB, LVM with separate `/`, `/home`,
+`/tmp`, `/var`, `/var/tmp`, `/var/log`, `/var/log/audit`.
+
+Differences from the plan, all now in the repo:
+
+- **Network: direct cable to the build host**, not the home LAN. The build
+  host shares its Wi-Fi over its second Ethernet port (`eno1`) with
+  `make airgap-link-share`: NetworkManager `shared` mode on
+  192.168.50.0/24 (DHCP, DNS, NAT), with the iMac's address reserved
+  (192.168.50.195). The host's other wired port (`enp3s0`) is a separate
+  link and is never touched. On the iMac, the wired profile had to be
+  enabled at the console (`nmcli con add type ethernet ... ipv4.method auto`).
+- **Bootstrap sudo:** cloud-init gives the VMs passwordless sudo; on the iMac
+  the same file was created by hand (`/etc/sudoers.d/90-cloud-init-users`,
+  `rocky ALL=(ALL) NOPASSWD:ALL`). The first hardening run deletes it and
+  sets the password from Vault.
+- **SSH key:** `ssh-copy-id` needs a terminal for the password prompt (run
+  it outside Claude Code); host key fingerprint checked at the console first.
+- **`python3-libselinux`:** not on a minimal install; added to the base
+  role's packages.
+- **GRUB:** the iMac boots through the standard Rocky GRUB/BLS setup but has
+  no `/etc/default/grub` (written by the installer's bootloader step). The
+  hardening role now skips the tasks that edit it and never runs
+  `grub2-mkconfig` without it (a rebuilt `grub.cfg` would lose BLS and the
+  boot entries' `fips=1`). Kernel arguments still go into the boot entries
+  through `grubby`; the GRUB password goes into `/boot/grub2/user.cfg`, which
+  the installed `grub.cfg` already reads (superuser stays `root`).
+  `grub.cfg` and the EFI partition are unchanged.
+
+| Step | Result |
+|---|---|
+| `make airgap-up` run 1 | stopped at the missing `/etc/default/grub` after 4m32s (FIPS on, reboot fine; `grub.cfg` untouched) |
+| `make airgap-up` run 2 | 9m54s, 52 changes, one reboot (kernel arguments, audit rules); node Ready, 0 image pull errors |
+| `make airgap-up` run 3 | 2m18s, `changed=0` |
+| Running kernel | `fips=1 ... audit=1 audit_backlog_limit=8192 init_on_free=1 page_poison=1 pti=on vsyscall=none`, SELinux enforcing |
+
+Next on the iMac: egress block (`make airgap-link-cut`, then
+`make airgap-disconnect`), then `make airgap-deploy`.

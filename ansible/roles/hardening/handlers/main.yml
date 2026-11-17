@@ -33,8 +33,11 @@
   ansible.builtin.command: nmcli connection reload
   changed_when: true
 
+# Never without /etc/default/grub (tasks/boot.yml): the rebuilt grub.cfg
+# would lack BLS support and the boot entries' kernel arguments.
 - name: Rebuild grub.cfg
   ansible.builtin.command: grub2-mkconfig -o /boot/grub2/grub.cfg
+  when: hardening_default_grub.stat.exists | default(false)
   changed_when: true
 
 - name: Reload systemd

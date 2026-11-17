@@ -1,6 +1,7 @@
 .PHONY: host up inventory down verify argocd bench stig-scan image policy-test \
 	rehearsal airgap-stage airgap-packages airgap-up airgap-disconnect airgap-reconnect \
-	airgap-deploy airgap-verify etcd-snapshot etcd-snapshots backup-store
+	airgap-deploy airgap-verify etcd-snapshot etcd-snapshots backup-store \
+	airgap-link-status airgap-link-share airgap-link-cut airgap-link-uncut
 
 # Node NIC and its reserved DHCP address (host-bootstrap reserves the address,
 # Terraform sets the MAC). registry.platform-lab.internal resolves to NODE_IP.
@@ -92,6 +93,21 @@ rehearsal:
 	cd terraform && terraform init && \
 	  terraform apply -auto-approve -var airgap_rehearsal=true -target=module.airgap_rehearsal
 	$(MAKE) inventory AIRGAP_REHEARSAL=true
+
+# Direct Ethernet link to the iMac (eno1; never enp3s0). share: NM shared
+# (DHCP, DNS, NAT via the host's Wi-Fi) on 192.168.50.0/24. cut: keep the
+# link and DHCP, drop forwarding beyond it. scripts/airgap-link.sh.
+airgap-link-status:
+	./scripts/airgap-link.sh status
+# The iMac's NIC and its reserved address on the link.
+AIRGAP_MAC  ?= ac:87:a3:35:6f:fc
+AIRGAP_ADDR ?= 192.168.50.195
+airgap-link-share:
+	NODE_MAC=$(AIRGAP_MAC) NODE_ADDR=$(AIRGAP_ADDR) ./scripts/airgap-link.sh share
+airgap-link-cut:
+	./scripts/airgap-link.sh cut
+airgap-link-uncut:
+	./scripts/airgap-link.sh uncut
 
 # Download everything the airgapped node needs into build/airgap/.
 airgap-stage:

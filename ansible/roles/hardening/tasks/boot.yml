@@ -26,12 +26,25 @@
     hardening_reboot_required: true
   when: hardening_kernel_args | difference(hardening_proc_cmdline.stdout.split()) | length > 0
 
+# /etc/default/grub is written by the installer's bootloader step. A
+# bare-metal install can lack it (the iMac boots through GRUB/BLS without
+# it). Without it, grub2-mkconfig would build a grub.cfg without BLS support
+# and lose the kernel arguments in the boot entries (fips=1 among them), so
+# the tasks that depend on it, and the grub.cfg rebuild, are skipped. Kernel
+# arguments still reach the boot entries through grubby above, and new
+# kernels inherit the running command line.
+- name: Check for the GRUB defaults file
+  ansible.builtin.stat:
+    path: /etc/default/grub
+  register: hardening_default_grub
+
 # Kernels installed later take their arguments from /etc/default/grub.
 - name: Add kernel arguments to the GRUB defaults
   ansible.builtin.lineinfile:
     path: /etc/default/grub
     regexp: '^GRUB_CMDLINE_LINUX='
     line: GRUB_CMDLINE_LINUX="{{ hardening_kernel_args | join(' ') }}"
+  when: hardening_default_grub.stat.exists
   notify: Rebuild grub.cfg
 
 - name: Disable the recovery boot entries
@@ -39,6 +52,7 @@
     path: /etc/default/grub
     regexp: '^GRUB_DISABLE_RECOVERY='
     line: GRUB_DISABLE_RECOVERY=true
+  when: hardening_default_grub.stat.exists
   notify: Rebuild grub.cfg
 
 - name: Use a non-default GRUB superuser name
@@ -49,6 +63,9 @@
   loop:
     - { regexp: 'set superusers="root"', replace: 'set superusers="{{ hardening_grub_superuser }}"' }
     - { regexp: 'password_pbkdf2 root ', replace: 'password_pbkdf2 {{ hardening_grub_superuser }} ' }
+  # Takes effect only through a grub.cfg rebuild; without /etc/default/grub
+  # the superuser stays `root` (the installed grub.cfg reads user.cfg).
+  when: hardening_default_grub.stat.exists
   notify: Rebuild grub.cfg
 
 - name: Set the GRUB password
