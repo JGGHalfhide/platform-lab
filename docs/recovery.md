@@ -1,7 +1,8 @@
 # Recovery
 
-Backups and restores for the build cluster, with measured times. The etcd
-restore drill is still to come (Week 7).
+Backups and restores for the build cluster, with measured times: an etcd
+snapshot restore of the whole cluster and a Velero restore of one
+namespace.
 
 ## etcd snapshots
 
@@ -25,6 +26,72 @@ The copy lands in `build/etcd-snapshots/<host>/` on the build host (0700
 directory, 0600 file). First snapshot: `week7-baseline`, 4.3 MB compressed
 (11/16). RKE2's CIS profile encrypts Secrets at rest, so the snapshot holds
 them encrypted.
+
+### Drill: restore the whole cluster from a snapshot (11/17, build cluster)
+
+Point in time: ConfigMap `drill-before` created, snapshot
+`pre-restore-drill-build-node-01-1794950188.zip` taken (5.3 MB, copied to
+the build host), then ConfigMap `drill-after` created. A correct restore
+brings back `drill-before` and not `drill-after`.
+
+Timeline (UTC):
+
+| Time | Step |
+|---|---|
+| 21:16:57 | `systemctl stop rke2-server`, `rke2-killall.sh`; etcd data directory moved aside (state destroyed) |
+| 21:17:03 | `rke2 server --cluster-reset --cluster-reset-restore-path=...`: snapshot restored (6 s) |
+| 21:17-21:27 | the reset waited for etcd, which failed with `open .../db/etcd/config: permission denied` |
+| ~21:37 | cause found and fixed (below); `rke2-server` started |
+| 21:38:27 | node Ready |
+| 21:38:39 | all 11 Argo CD apps Synced/Healthy |
+| 21:44:20 | `db-0` Ready after deleting its stuck pod (below) |
+
+Result: `drill-before` present, `drill-after` absent (restored to the
+snapshot); sample database identical (`1000|8e64511e...`); policy reports
+514 pass / 0 fail; kube-bench 80 pass / 1 fail, unchanged
+(`docs/scans/week7-etcd-restore-kube-bench.txt`).
+
+**Measured outage: 21m42s** to all apps healthy, 27m23s to the database pod.
+Most of it was the detour below. Without it, the steps take about
+6 s (restore) + ~80 s (start to node Ready) + ~12 s (apps) + about a minute
+for stuck pods: **an estimated RTO of about 3 minutes**, not yet measured end
+to end.
+
+What went wrong, and what the procedure now does:
+
+1. **SELinux user on restored files.** The reset ran from an interactive
+   root shell (Ansible `sudo`), so the files it wrote got the SELinux user
+   `unconfined_u` instead of `system_u`. Owner, mode and type matched
+   (`etcd:etcd 0600`, `rke2_service_db_file_t`), yet etcd was refused and
+   nothing reached the audit log. `restorecon -R -F` on `server/db` fixed it.
+   Run the reset through `systemd-run` (as the service runs) or relabel
+   before starting.
+2. **Stuck pods.** `rke2-killall.sh` removes every container; the restored
+   Pod objects still describe the old ones. Most pods recovered on their
+   own; the StatefulSet pod `db-0` stayed Pending with no events. Deleting
+   the pod (not its PVC) let the StatefulSet recreate it; the volume and its
+   data are not in etcd and were untouched.
+3. **One reset is enough.** The first reset had already reset the
+   membership; a second one stops with "membership was previously reset".
+
+### Procedure (single server)
+
+```bash
+# On the node, as root. Copy the snapshot out of server/db first: RKE2 keeps
+# its snapshots inside the data directory.
+SNAP=/var/lib/rancher/rke2/server/db/snapshots/<name>.zip
+cp -a "$SNAP" /var/lib/rancher/rke2/restore.zip
+systemctl stop rke2-server
+rke2-killall.sh
+systemd-run --wait --collect --unit=rke2-restore \
+  rke2 server --cluster-reset --cluster-reset-restore-path=/var/lib/rancher/rke2/restore.zip
+restorecon -R -F /var/lib/rancher/rke2/server/db      # belt and braces
+systemctl start rke2-server
+```
+
+Then, from the build host: wait for the node and Argo CD apps; delete any
+pod left Pending/Unknown with a terminated container (`kubectl delete pod`,
+never its PVC).
 
 ## Velero
 

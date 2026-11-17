@@ -246,9 +246,9 @@ Goal: metrics, logs, and a measured restore.
 - [x] kube-prometheus-stack and Loki (with Alloy; Promtail is end-of-life) deployed via Argo CD; included in the Zarf package (11/17: build cluster via Argo CD, iMac via zarf/monitoring; 13/13 targets up on both; docs/observability.md)
 - [x] Grafana dashboards for node, etcd, and policy reports committed as JSON under `gitops/` (11/17: gitops/monitoring/dashboards/)
 - [x] etcd snapshot: scheduled snapshots configured, manual `rke2 etcd-snapshot save` (11/16: every 6 h, 12 kept; `make etcd-snapshot`, copy on the build host)
-- [ ] Restore drill: destroy state, `rke2 server --cluster-reset --cluster-reset-restore-path=<snapshot>`, verify; record elapsed time
+- [x] Restore drill: destroy state, `rke2 server --cluster-reset --cluster-reset-restore-path=<snapshot>`, verify; record elapsed time (11/17: restored to the snapshot, data identical; outage 21m42s incl. an SELinux detour, est. RTO ~3 min; docs/recovery.md)
 - [x] Velero with an in-cluster or local S3-compatible backend (MinIO); back up and restore the sample app namespace; record elapsed time (11/16: Garage on the build host instead of MinIO; backup 20 s, restore 22 s, data verified; docs/recovery.md)
-- [ ] `docs/recovery.md` with RTO measurements and procedures (started 11/16: snapshots, Velero drill; etcd restore drill to add)
+- [x] `docs/recovery.md` with RTO measurements and procedures (11/17: etcd snapshot restore and Velero drills)
 - [ ] Tag `v0.7`
 
 Acceptance: both restore drills complete with recorded times; dashboards show data on both clusters.
