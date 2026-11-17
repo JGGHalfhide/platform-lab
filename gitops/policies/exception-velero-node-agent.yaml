@@ -1,0 +1,28 @@
+# Velero's node agent backs up and restores pod volumes at the file level: it
+# mounts /var/lib/kubelet/pods from the host and runs as root with the spc_t
+# SELinux type, which both disallow-host-path and the restricted Pod Security
+# policy reject. This matches the namespace's Pod Security exemption
+# (enforce=privileged, gitops/velero/namespace.yaml). Only the node agent's
+# pods match; the Velero server runs restricted. The agent is not
+# privileged, drops all capabilities except the file-access ones, and has no
+# privilege escalation, so the other policies still pass.
+apiVersion: policies.kyverno.io/v1
+kind: PolicyException
+metadata:
+  name: velero-node-agent
+  namespace: kyverno
+spec:
+  policyRefs:
+    - name: disallow-host-path
+      kind: ValidatingPolicy
+    - name: pod-security-restricted
+      kind: ValidatingPolicy
+  matchConditions:
+    # The pods carry the chart's `name: node-agent` label; the DaemonSet
+    # itself (checked through autogen) does not, so it is matched by name.
+    - name: node-agent
+      expression: >-
+        object.metadata.namespace == 'velero' && (
+          (object.kind == 'Pod' &&
+           object.metadata.?labels.orValue({})[?'name'].orValue('') == 'node-agent') ||
+          (object.kind == 'DaemonSet' && object.metadata.name == 'node-agent'))

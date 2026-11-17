@@ -21,7 +21,7 @@ spec:
   matchConditions:
     - name: platform-namespaces
       expression: >-
-        object.metadata.namespace in ['argocd', 'zot', 'kyverno', 'local-path-storage']
+        object.metadata.namespace in ['argocd', 'zot', 'kyverno', 'local-path-storage', 'velero']
   allowedValues:
     # argocd
     - "quay.io/argoproj/argocd:"
@@ -35,6 +35,11 @@ spec:
     - "reg.kyverno.io/kyverno/background-controller:"
     - "reg.kyverno.io/kyverno/cleanup-controller:"
     - "reg.kyverno.io/kyverno/reports-controller:"
+    # velero (server, AWS plugin init container, node agent). The restore
+    # helper that Velero injects into restored pods uses the signed copy in
+    # the platform registry instead (gitops/velero/restore-helper-config.yaml).
+    - "docker.io/velero/velero:"
+    - "docker.io/velero/velero-plugin-for-aws:"
     # local-path-storage (provisioner and its helper pods)
     - "docker.io/rancher/local-path-provisioner:"
     - "docker.io/library/busybox:"

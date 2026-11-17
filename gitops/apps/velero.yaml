@@ -1,0 +1,36 @@
+# Velero backup and restore (docs/recovery.md).
+# - Chart values: gitops/values/velero.yaml. Namespace (Pod Security
+#   exemption for the node agent) and restore helper config: gitops/velero.
+# - Secrets velero-s3 and velero-repo-credentials come from Vault
+#   (velero_secrets role), not from Git.
+# - Backups: Garage bucket `velero` on the build host (make backup-store).
+# - The Velero ServiceAccount is bound to cluster-admin (chart default):
+#   backing up and restoring arbitrary resources needs it.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: velero
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://vmware-tanzu.github.io/helm-charts
+      chart: velero
+      targetRevision: 12.2.2
+      helm:
+        valueFiles:
+          - $repo/gitops/values/velero.yaml
+    # Also the source of the chart values ($repo).
+    - repoURL: https://github.com/JGGHalfhide/platform-lab.git
+      targetRevision: main
+      path: gitops/velero
+      ref: repo
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: velero
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

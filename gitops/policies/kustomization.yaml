@@ -11,6 +11,7 @@ resources:
   - exception-kube-bench.yaml
   - exception-local-path-helper.yaml
   - exception-platform-bootstrap-images.yaml
+  - exception-velero-node-agent.yaml
   - pod-security-restricted.yaml
   - require-labels.yaml
   - require-resources.yaml

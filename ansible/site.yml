@@ -25,10 +25,12 @@
     - sample_app_secret
 
 # Build cluster only: Secrets for the in-cluster registry and Argo CD, which
-# the airgapped cluster does not run (Zarf brings its own registry).
+# the airgapped cluster does not run (Zarf brings its own registry), and for
+# Velero (backups to Garage on the build host).
 - name: Build cluster Secrets
   hosts: build_servers
   become: true
   roles:
     - registry_auth
     - argocd_redis_auth
+    - velero_secrets

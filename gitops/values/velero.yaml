@@ -1,0 +1,133 @@
+# Velero chart values (chart 12.2.2, Velero v1.18.4), build cluster
+# (gitops/apps/velero.yaml). Backups go to the Garage bucket on the build
+# host (scripts/backup-store.sh); volumes by file-system backup (Kopia),
+# since local-path has no CSI snapshots.
+image:
+  repository: docker.io/velero/velero
+  tag: v1.18.4
+
+# CRDs come from the chart's crds/ directory (applied by Argo CD); no
+# kubectl Job with another upstream image.
+upgradeCRDs: false
+cleanUpCRDs: false
+
+initContainers:
+  - name: velero-plugin-for-aws
+    image: docker.io/velero/velero-plugin-for-aws:v1.14.4
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+      - mountPath: /target
+        name: plugins
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 64Mi
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop: ["ALL"]
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 512Mi
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+# CIS 5.1.5/5.1.6: no automounted token; the server and node agent call the
+# API with an explicitly projected, time-limited one.
+serviceAccount:
+  server:
+    automountServiceAccountToken: false
+extraVolumes: &token-volume
+  - name: kube-api-access
+    projected:
+      defaultMode: 0444
+      sources:
+        - serviceAccountToken:
+            path: token
+            expirationSeconds: 3607
+        - configMap:
+            name: kube-root-ca.crt
+            items:
+              - key: ca.crt
+                path: ca.crt
+        - downwardAPI:
+            items:
+              - path: namespace
+                fieldRef:
+                  fieldPath: metadata.namespace
+extraVolumeMounts: &token-mount
+  - name: kube-api-access
+    mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+    readOnly: true
+
+# Credentials file from the velero-s3 Secret (velero_secrets role, Vault),
+# mounted at /credentials/cloud; no Secret in environment variables.
+credentials:
+  useSecret: true
+  existingSecret: velero-s3
+
+snapshotsEnabled: false
+configuration:
+  uploaderType: kopia
+  # Volumes are backed up only when a backup asks for it
+  # (--default-volumes-to-fs-backup), see docs/recovery.md.
+  defaultVolumesToFsBackup: false
+  backupStorageLocation:
+    - name: default
+      provider: aws
+      bucket: velero
+      default: true
+      config:
+        region: garage
+        s3ForcePathStyle: "true"
+        s3Url: http://192.168.122.1:3900
+  volumeSnapshotLocation: []
+
+deployNodeAgent: true
+nodeAgent:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 1Gi
+  # Root and spc_t: reads and writes other pods' volume files, whose SELinux
+  # labels carry each pod's own MCS categories. Only the capabilities needed
+  # to read any file and restore ownership and modes.
+  podSecurityContext:
+    runAsUser: 0
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+      add: ["CHOWN", "DAC_OVERRIDE", "DAC_READ_SEARCH", "FOWNER", "FSETID"]
+    seLinuxOptions:
+      type: spc_t
+  extraVolumes: *token-volume
+  extraVolumeMounts: *token-mount
+
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: false

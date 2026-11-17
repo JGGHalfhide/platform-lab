@@ -111,8 +111,10 @@ def add_volume(vol):
 # (name, kind, change[, namespace]). Skipped: a PolicyException applies.
 EXCEPTIONS = {
     "restrict-image-registries": ["exception-platform-bootstrap-images.yaml", "exception-kube-bench.yaml"],
-    "disallow-host-path": ["exception-local-path-helper.yaml", "exception-kube-bench.yaml"],
-    "pod-security-restricted": ["exception-local-path-helper.yaml", "exception-kube-bench.yaml"],
+    "disallow-host-path": ["exception-local-path-helper.yaml", "exception-kube-bench.yaml",
+                           "exception-velero-node-agent.yaml"],
+    "pod-security-restricted": ["exception-local-path-helper.yaml", "exception-kube-bench.yaml",
+                                "exception-velero-node-agent.yaml"],
     "disallow-privileged-containers": ["exception-kube-bench.yaml"],
 }
 KUBE_BENCH = ("docker.io/aquasec/kube-bench@sha256:"
@@ -126,6 +128,17 @@ def kube_bench(*changes):
         for c in changes:
             c(spec, meta)
     return change
+
+
+def node_agent(*changes):
+    """Velero's node-agent pod label plus other changes."""
+    def change(spec, meta):
+        meta["labels"]["name"] = "node-agent"
+        for c in changes:
+            c(spec, meta)
+    return change
+HOST_PODS = {"name": "host-pods", "hostPath": {"path": "/var/lib/kubelet/pods"}}
+VELERO = "docker.io/velero/velero:v1.18.4"
 HOST_PATH = {"name": "data", "hostPath": {"path": "/opt/local-path-provisioner"}}
 ARGOCD = "quay.io/argoproj/argocd:v3.6.1"
 
@@ -145,9 +158,13 @@ CASES = {
          ("host-path-deploy", deployment, add_volume({"name": "host", "hostPath": {"path": "/etc"}})),
          # the helper exception is scoped to its namespace and name prefix
          ("helper-pod-create-pvc-other-ns", pod, add_volume(HOST_PATH)),
-         ("not-a-helper", pod, add_volume(HOST_PATH), "local-path-storage")],
+         ("not-a-helper", pod, add_volume(HOST_PATH), "local-path-storage"),
+         # the node-agent exception needs both the namespace and the label
+         ("node-agent-label-other-ns", pod, node_agent(add_volume(HOST_PODS))),
+         ("not-node-agent-in-velero", pod, add_volume(HOST_PODS), "velero")],
         [("helper-pod-create-pvc-1", pod, add_volume(HOST_PATH), "local-path-storage"),
-         ("kube-bench-host-path", pod, kube_bench(add_volume({"name": "etc", "hostPath": {"path": "/etc/rancher"}})), "kube-bench")],
+         ("kube-bench-host-path", pod, kube_bench(add_volume({"name": "etc", "hostPath": {"path": "/etc/rancher"}})), "kube-bench"),
+         ("velero-node-agent-host-pods", pod, node_agent(add_volume(HOST_PODS)), "velero")],
     ),
     "pod-security-restricted": (
         [("compliant", pod, None),
@@ -173,9 +190,12 @@ CASES = {
          ("unsafe-sysctl", pod, set_(["securityContext", "sysctls"], [{"name": "kernel.msgmax", "value": "1"}], "pod")),
          ("nfs-volume", pod, add_volume({"name": "nfs", "nfs": {"server": "nfs.example", "path": "/"}})),
          ("host-network-deploy", deployment, set_(["hostNetwork"], True, "pod")),
-         ("root-not-helper", pod, set_(["securityContext", "runAsNonRoot"], False, "pod"), "local-path-storage")],
+         ("root-not-helper", pod, set_(["securityContext", "runAsNonRoot"], False, "pod"), "local-path-storage"),
+         ("selinux-spc-t", pod, set_(["securityContext", "seLinuxOptions", "type"], "spc_t")),
+         ("root-in-velero-not-node-agent", pod, set_(["securityContext", "runAsNonRoot"], False, "pod"), "velero")],
         [("helper-pod-delete-pvc-1", pod, set_(["securityContext", "runAsNonRoot"], False, "pod"), "local-path-storage"),
-         ("kube-bench-host-pid", pod, kube_bench(set_(["hostPID"], True, "pod")), "kube-bench")],
+         ("kube-bench-host-pid", pod, kube_bench(set_(["hostPID"], True, "pod")), "kube-bench"),
+         ("velero-node-agent-spc-t", pod, node_agent(set_(["securityContext", "seLinuxOptions", "type"], "spc_t")), "velero")],
     ),
     "disallow-latest-tag": (
         [("compliant", pod, None),
@@ -223,6 +243,7 @@ CASES = {
          # platform-bootstrap-images exception: listed repos, platform namespaces
          ("argocd-upstream", pod, set_(["image"], ARGOCD), "argocd"),
          ("zot-upstream", pod, set_(["image"], "ghcr.io/project-zot/zot:v2.1.23"), "zot"),
+         ("velero-upstream", pod, set_(["image"], VELERO), "velero"),
          # kube-bench-image exception: the pinned scanner, in its namespace, with its label
          ("kube-bench-image", pod, kube_bench(set_(["image"], KUBE_BENCH)), "kube-bench")],
         [("docker-hub", pod, set_(["image"], "docker.io/library/alpine:3.22")),
@@ -234,6 +255,7 @@ CASES = {
          ("docker-hub-deploy", deployment, set_(["image"], "docker.io/library/alpine:3.22")),
          # the exception adds exact repositories only, in its namespaces only
          ("argocd-image-in-apps", pod, set_(["image"], ARGOCD)),
+         ("velero-image-in-apps", pod, set_(["image"], VELERO)),
          ("other-image-in-argocd", pod, set_(["image"], "docker.io/library/alpine:3.22"), "argocd"),
          ("lookalike-repo-in-argocd", pod, set_(["image"], "quay.io/argoproj/argocd-evil:v1"), "argocd"),
          ("kube-bench-image-in-apps", pod, kube_bench(set_(["image"], KUBE_BENCH))),

@@ -1,0 +1,26 @@
+# Restore helper: on a file-system restore Velero adds an init container to
+# each restored pod, in the application's namespace. Those namespaces only
+# admit signed images from the platform registry (Kyverno), so the helper
+# runs the Velero image published with `make image` (scanned, signed),
+# pinned by digest, with a restricted security context. No user is set, so
+# the container inherits each pod's own (non-root) user.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fs-restore-action-config
+  namespace: velero
+  labels:
+    velero.io/plugin-config: ""
+    velero.io/pod-volume-restore: RestoreItemAction
+data:
+  image: 127.0.0.1:30500/velero/velero:v1.18.4@sha256:c89fb5b6d1fd6afd368e0f483e6f5555fd62851a1eada8ac5c72482e674ca17b
+  cpuRequest: 10m
+  memRequest: 32Mi
+  cpuLimit: "0"
+  memLimit: 128Mi
+  secCtx: |
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL

@@ -10,6 +10,7 @@ resources:
 exceptions:
 - ../../../gitops/policies/exception-local-path-helper.yaml
 - ../../../gitops/policies/exception-kube-bench.yaml
+- ../../../gitops/policies/exception-velero-node-agent.yaml
 results:
 - policy: disallow-host-path
   resources:
@@ -38,11 +39,26 @@ results:
   result: fail
 - policy: disallow-host-path
   resources:
+  - node-agent-label-other-ns
+  kind: Pod
+  result: fail
+- policy: disallow-host-path
+  resources:
+  - not-node-agent-in-velero
+  kind: Pod
+  result: fail
+- policy: disallow-host-path
+  resources:
   - helper-pod-create-pvc-1
   kind: Pod
   result: skip
 - policy: disallow-host-path
   resources:
   - kube-bench-host-path
+  kind: Pod
+  result: skip
+- policy: disallow-host-path
+  resources:
+  - velero-node-agent-host-pods
   kind: Pod
   result: skip

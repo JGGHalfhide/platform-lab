@@ -10,6 +10,7 @@ resources:
 exceptions:
 - ../../../gitops/policies/exception-local-path-helper.yaml
 - ../../../gitops/policies/exception-kube-bench.yaml
+- ../../../gitops/policies/exception-velero-node-agent.yaml
 results:
 - policy: pod-security-restricted
   resources:
@@ -123,11 +124,26 @@ results:
   result: fail
 - policy: pod-security-restricted
   resources:
+  - selinux-spc-t
+  kind: Pod
+  result: fail
+- policy: pod-security-restricted
+  resources:
+  - root-in-velero-not-node-agent
+  kind: Pod
+  result: fail
+- policy: pod-security-restricted
+  resources:
   - helper-pod-delete-pvc-1
   kind: Pod
   result: skip
 - policy: pod-security-restricted
   resources:
   - kube-bench-host-pid
+  kind: Pod
+  result: skip
+- policy: pod-security-restricted
+  resources:
+  - velero-node-agent-spc-t
   kind: Pod
   result: skip

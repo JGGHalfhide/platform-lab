@@ -745,6 +745,72 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
+  name: selinux-spc-t
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: web
+spec:
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: app
+    image: 127.0.0.1:30500/library/alpine:3.22@sha256:49340b346798875b5592e5d420241f2f9cfba5f47e62ebb1446a1b34734e898f
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      seLinuxOptions:
+        type: spc_t
+    resources:
+      requests:
+        cpu: 10m
+        memory: 16Mi
+      limits:
+        memory: 32Mi
+  volumes:
+  - name: tmp
+    emptyDir: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: root-in-velero-not-node-agent
+  namespace: velero
+  labels:
+    app.kubernetes.io/name: web
+spec:
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: false
+    runAsUser: 65532
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: app
+    image: 127.0.0.1:30500/library/alpine:3.22@sha256:49340b346798875b5592e5d420241f2f9cfba5f47e62ebb1446a1b34734e898f
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+    resources:
+      requests:
+        cpu: 10m
+        memory: 16Mi
+      limits:
+        memory: 32Mi
+  volumes:
+  - name: tmp
+    emptyDir: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
   name: helper-pod-delete-pvc-1
   namespace: local-path-storage
   labels:
@@ -806,3 +872,38 @@ spec:
   - name: tmp
     emptyDir: {}
   hostPID: true
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: velero-node-agent-spc-t
+  namespace: velero
+  labels:
+    app.kubernetes.io/name: web
+    name: node-agent
+spec:
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: app
+    image: 127.0.0.1:30500/library/alpine:3.22@sha256:49340b346798875b5592e5d420241f2f9cfba5f47e62ebb1446a1b34734e898f
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      seLinuxOptions:
+        type: spc_t
+    resources:
+      requests:
+        cpu: 10m
+        memory: 16Mi
+      limits:
+        memory: 32Mi
+  volumes:
+  - name: tmp
+    emptyDir: {}

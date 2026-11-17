@@ -1,0 +1,63 @@
+---
+# Same pattern as registry_auth: kubectl diff exits 0 when the live object
+# matches, 1 when it differs or is missing; apply only then, so a second run
+# reports no changes. Server-side apply keeps the data out of annotations.
+- name: Check for the Velero namespace
+  ansible.builtin.command:
+    cmd: "{{ velero_secrets_kubectl }} get namespace {{ velero_secrets_namespace }}"
+  register: velero_secrets_ns
+  changed_when: false
+  failed_when: false
+
+- name: Create the Velero namespace
+  ansible.builtin.command:
+    cmd: "{{ velero_secrets_kubectl }} create namespace {{ velero_secrets_namespace }}"
+  when: velero_secrets_ns.rc != 0
+  changed_when: true
+
+- name: Render the Velero Secrets
+  ansible.builtin.set_fact:
+    velero_secrets_manifests:
+      - apiVersion: v1
+        kind: Secret
+        metadata:
+          name: velero-s3
+          namespace: "{{ velero_secrets_namespace }}"
+          labels:
+            app.kubernetes.io/part-of: velero
+        type: Opaque
+        stringData:
+          cloud: |
+            [default]
+            aws_access_key_id={{ velero_secrets_s3_key_id }}
+            aws_secret_access_key={{ velero_secrets_s3_secret }}
+      - apiVersion: v1
+        kind: Secret
+        metadata:
+          name: velero-repo-credentials
+          namespace: "{{ velero_secrets_namespace }}"
+          labels:
+            app.kubernetes.io/part-of: velero
+        type: Opaque
+        stringData:
+          repository-password: "{{ velero_secrets_repo_password }}"
+  no_log: true
+
+- name: Compare with the cluster
+  ansible.builtin.command:
+    cmd: "{{ velero_secrets_kubectl }} diff --server-side -f -"
+    stdin: "{{ item | to_json }}"
+  loop: "{{ velero_secrets_manifests }}"
+  register: velero_secrets_diff
+  changed_when: false
+  failed_when: velero_secrets_diff.rc > 1
+  no_log: true
+
+- name: Apply the Velero Secrets
+  ansible.builtin.command:
+    cmd: "{{ velero_secrets_kubectl }} apply --server-side -f -"
+    stdin: "{{ item.item | to_json }}"
+  loop: "{{ velero_secrets_diff.results }}"
+  when: item.rc == 1
+  changed_when: true
+  no_log: true

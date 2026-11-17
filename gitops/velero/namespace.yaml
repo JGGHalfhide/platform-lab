@@ -1,0 +1,24 @@
+# Pod Security exemption: Velero's node agent reads and writes other pods'
+# volumes through hostPath /var/lib/kubelet/pods, as root, with the spc_t
+# SELinux type (each pod's volume is labelled with that pod's own MCS
+# categories). Enforce privileged here only; warn and audit stay at
+# restricted. The Velero server runs restricted. Kyverno: PolicyException
+# velero-node-agent (gitops/policies).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: velero
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted
+  annotations:
+    platform-lab/pss-exception: "node agent mounts hostPath /var/lib/kubelet/pods for file-system backups"
+---
+# CIS 5.1.5: no token for the namespace's default ServiceAccount.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: default
+  namespace: velero
+automountServiceAccountToken: false
