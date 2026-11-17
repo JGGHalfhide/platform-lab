@@ -137,6 +137,15 @@ def node_agent(*changes):
         for c in changes:
             c(spec, meta)
     return change
+
+
+def velero_hosting_pod(*changes):
+    """A Velero 1.18 per-volume hosting pod's label plus other changes."""
+    def change(spec, meta):
+        meta["labels"]["velero.io/pod-volume-backup"] = "sample-app-drill-abc12"
+        for c in changes:
+            c(spec, meta)
+    return change
 HOST_PODS = {"name": "host-pods", "hostPath": {"path": "/var/lib/kubelet/pods"}}
 VELERO = "docker.io/velero/velero:v1.18.4"
 HOST_PATH = {"name": "data", "hostPath": {"path": "/opt/local-path-provisioner"}}
@@ -161,10 +170,12 @@ CASES = {
          ("not-a-helper", pod, add_volume(HOST_PATH), "local-path-storage"),
          # the node-agent exception needs both the namespace and the label
          ("node-agent-label-other-ns", pod, node_agent(add_volume(HOST_PODS))),
+         ("hosting-pod-label-other-ns", pod, velero_hosting_pod(add_volume(HOST_PODS))),
          ("not-node-agent-in-velero", pod, add_volume(HOST_PODS), "velero")],
         [("helper-pod-create-pvc-1", pod, add_volume(HOST_PATH), "local-path-storage"),
          ("kube-bench-host-path", pod, kube_bench(add_volume({"name": "etc", "hostPath": {"path": "/etc/rancher"}})), "kube-bench"),
-         ("velero-node-agent-host-pods", pod, node_agent(add_volume(HOST_PODS)), "velero")],
+         ("velero-node-agent-host-pods", pod, node_agent(add_volume(HOST_PODS)), "velero"),
+         ("velero-hosting-pod-host-pods", pod, velero_hosting_pod(add_volume(HOST_PODS)), "velero")],
     ),
     "pod-security-restricted": (
         [("compliant", pod, None),
@@ -195,7 +206,8 @@ CASES = {
          ("root-in-velero-not-node-agent", pod, set_(["securityContext", "runAsNonRoot"], False, "pod"), "velero")],
         [("helper-pod-delete-pvc-1", pod, set_(["securityContext", "runAsNonRoot"], False, "pod"), "local-path-storage"),
          ("kube-bench-host-pid", pod, kube_bench(set_(["hostPID"], True, "pod")), "kube-bench"),
-         ("velero-node-agent-spc-t", pod, node_agent(set_(["securityContext", "seLinuxOptions", "type"], "spc_t")), "velero")],
+         ("velero-node-agent-spc-t", pod, node_agent(set_(["securityContext", "seLinuxOptions", "type"], "spc_t")), "velero"),
+         ("velero-hosting-pod-root", pod, velero_hosting_pod(set_(["securityContext", "runAsNonRoot"], False, "pod")), "velero")],
     ),
     "disallow-latest-tag": (
         [("compliant", pod, None),

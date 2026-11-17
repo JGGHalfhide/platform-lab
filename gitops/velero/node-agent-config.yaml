@@ -1,0 +1,26 @@
+# Node-agent configuration (--node-agent-configmap, gitops/values/velero.yaml).
+# Velero 1.18 copies each pod volume in a short-lived "hosting pod" in this
+# namespace (created by the node agent, root, hostPath to the source pod's
+# volume). The cluster policies need resources and the
+# app.kubernetes.io/name label on every pod; host access and root are covered
+# by the velero-node-agent PolicyException, which matches these pods by
+# Velero's own velero.io/pod-volume-backup / -restore label.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: node-agent-config
+  namespace: velero
+data:
+  node-agent-config.json: |
+    {
+      "podResources": {
+        "cpuRequest": "50m",
+        "cpuLimit": "1",
+        "memoryRequest": "128Mi",
+        "memoryLimit": "1Gi"
+      },
+      "podLabels": {
+        "app.kubernetes.io/name": "velero-data-mover",
+        "app.kubernetes.io/part-of": "velero"
+      }
+    }

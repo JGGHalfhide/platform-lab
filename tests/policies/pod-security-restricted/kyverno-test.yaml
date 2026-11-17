@@ -147,3 +147,8 @@ results:
   - velero-node-agent-spc-t
   kind: Pod
   result: skip
+- policy: pod-security-restricted
+  resources:
+  - velero-hosting-pod-root
+  kind: Pod
+  result: skip

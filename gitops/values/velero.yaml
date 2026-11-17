@@ -114,6 +114,10 @@ configuration:
 
 deployNodeAgent: true
 nodeAgent:
+  # Resources and labels for the per-volume hosting pods
+  # (gitops/velero/node-agent-config.yaml).
+  extraArgs:
+    - --node-agent-configmap=node-agent-config
   resources:
     requests:
       cpu: 50m

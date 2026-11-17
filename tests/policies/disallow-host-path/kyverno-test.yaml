@@ -44,6 +44,11 @@ results:
   result: fail
 - policy: disallow-host-path
   resources:
+  - hosting-pod-label-other-ns
+  kind: Pod
+  result: fail
+- policy: disallow-host-path
+  resources:
   - not-node-agent-in-velero
   kind: Pod
   result: fail
@@ -60,5 +65,10 @@ results:
 - policy: disallow-host-path
   resources:
   - velero-node-agent-host-pods
+  kind: Pod
+  result: skip
+- policy: disallow-host-path
+  resources:
+  - velero-hosting-pod-host-pods
   kind: Pod
   result: skip
