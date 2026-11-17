@@ -1,0 +1,171 @@
+---
+# Restore an RKE2 server's etcd from one of its snapshots (docs/recovery.md).
+#
+#   make etcd-restore SNAPSHOT=<name> CONFIRM=yes [LIMIT=airgap_servers]
+#
+# Destructive: the cluster state returns to the snapshot; everything written
+# to etcd since is lost (volume data on disk is not in etcd and is kept).
+#
+# Lessons from the first drill (11/17), built in:
+# - The snapshot is copied out of server/db first, and server/db itself is
+#   never moved: RKE2 keeps its snapshots in server/db/snapshots, and the
+#   reset itself only replaces server/db/etcd.
+# - The reset runs through systemd-run, in the service's SELinux context. Run
+#   from an interactive root shell it labelled the restored files with the
+#   SELinux user unconfined_u, and etcd was refused (nothing in the audit
+#   log). restorecon -RF afterwards as a backstop.
+# - rke2-killall.sh removes every container; restored Pod objects still
+#   describe the old ones, and some (a StatefulSet pod) stay Pending with no
+#   events. After a grace period those pods are deleted (never their PVCs)
+#   so their controllers recreate them.
+- name: Restore etcd from a snapshot
+  hosts: rke2_servers
+  become: true
+  serial: 1
+  vars:
+    etcd_restore_snapshot: ""
+    etcd_restore_confirm: "no"
+    etcd_restore_snapshot_dir: /var/lib/rancher/rke2/server/db/snapshots
+    etcd_restore_copy: /var/lib/rancher/rke2/restore-snapshot.zip
+    etcd_restore_kubectl: /var/lib/rancher/rke2/bin/kubectl --kubeconfig /etc/rancher/rke2/rke2.yaml
+    # Pods still stuck this long after the node is Ready are recreated.
+    etcd_restore_pod_grace_seconds: 60
+  tasks:
+    - name: Require a snapshot name and an explicit confirmation
+      ansible.builtin.assert:
+        that:
+          - etcd_restore_snapshot | length > 0
+          - etcd_restore_confirm == 'yes'
+        fail_msg: >-
+          Set SNAPSHOT=<name> and CONFIRM=yes. This returns the whole cluster
+          to that snapshot.
+
+    - name: Find the snapshot
+      ansible.builtin.find:
+        paths: "{{ etcd_restore_snapshot_dir }}"
+        patterns: "{{ etcd_restore_snapshot }}*"
+      register: etcd_restore_found
+
+    - name: Pick the newest match
+      ansible.builtin.set_fact:
+        etcd_restore_file: "{{ (etcd_restore_found.files | sort(attribute='mtime') | last).path }}"
+      failed_when: etcd_restore_found.matched == 0
+
+    - name: Copy the snapshot out of server/db
+      ansible.builtin.copy:
+        src: "{{ etcd_restore_file }}"
+        dest: "{{ etcd_restore_copy }}"
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Start the clock
+      ansible.builtin.command: date +%s
+      register: etcd_restore_t0
+      changed_when: false
+
+    - name: Stop rke2-server
+      ansible.builtin.systemd_service:
+        name: rke2-server
+        state: stopped
+
+    # The unit leaves containers running, etcd among them; it must not run
+    # while its data is replaced.
+    - name: Stop every RKE2 container
+      ansible.builtin.command: /usr/bin/rke2-killall.sh
+      changed_when: true
+
+    - name: Reset etcd from the snapshot (in the service's SELinux context)
+      ansible.builtin.command:
+        argv:
+          - systemd-run
+          - --wait
+          - --collect
+          - --unit=rke2-etcd-restore
+          - --property=TimeoutStartSec=900
+          - /usr/bin/rke2
+          - server
+          - --cluster-reset
+          - --cluster-reset-restore-path={{ etcd_restore_copy }}
+      register: etcd_restore_reset
+      changed_when: true
+
+    - name: Relabel the restored data
+      ansible.builtin.command: restorecon -R -F /var/lib/rancher/rke2/server/db
+      changed_when: true
+
+    - name: Start rke2-server
+      ansible.builtin.systemd_service:
+        name: rke2-server
+        state: started
+
+    - name: Wait for the node to be Ready
+      ansible.builtin.command: >-
+        {{ etcd_restore_kubectl }} wait --for=condition=Ready
+        node/{{ ansible_facts['hostname'] }} --timeout=30s
+      register: etcd_restore_ready
+      until: etcd_restore_ready is succeeded
+      retries: 30
+      delay: 10
+      changed_when: false
+
+    - name: Note the time to Ready
+      ansible.builtin.command: date +%s
+      register: etcd_restore_t_ready
+      changed_when: false
+
+    - name: Give pods time to restart on their own
+      ansible.builtin.wait_for:
+        timeout: "{{ etcd_restore_pod_grace_seconds }}"
+
+    # Each round deletes pods whose container was removed by rke2-killall.sh
+    # and that the kubelet has not restarted (Pending/Unknown with a
+    # container terminated as Unknown), then counts pods not yet running.
+    - name: Recreate stuck pods and wait until every pod runs
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          {{ etcd_restore_kubectl }} get pods -A -o json | python3 -c '
+          import json, subprocess, sys
+          kubectl = sys.argv[1].split()
+          pending = 0
+          for p in json.load(sys.stdin)["items"]:
+              st, md = p["status"], p["metadata"]
+              phase = st.get("phase")
+              if phase == "Succeeded" or md.get("deletionTimestamp"):
+                  continue
+              cs = st.get("containerStatuses") or []
+              stale = any((c.get("state", {}).get("terminated") or {}).get("reason") == "Unknown" for c in cs)
+              if phase in ("Pending", "Unknown") and stale:
+                  subprocess.run(kubectl + ["-n", md["namespace"], "delete", "pod", md["name"], "--wait=false"], check=True)
+                  print("recreated", md["namespace"] + "/" + md["name"])
+                  pending += 1
+              elif not (phase == "Running" and cs and all(c.get("ready") for c in cs)):
+                  pending += 1
+          print("not running:", pending)
+          sys.exit(1 if pending else 0)
+          ' "{{ etcd_restore_kubectl }}"
+      register: etcd_restore_pods
+      until: etcd_restore_pods.rc == 0
+      retries: 40
+      delay: 15
+      changed_when: "'recreated' in etcd_restore_pods.stdout"
+
+    - name: Note the time to all pods running
+      ansible.builtin.command: date +%s
+      register: etcd_restore_t_pods
+      changed_when: false
+
+    - name: Remove the snapshot copy
+      ansible.builtin.file:
+        path: "{{ etcd_restore_copy }}"
+        state: absent
+
+    - name: Report
+      ansible.builtin.debug:
+        msg: >-
+          Restored {{ etcd_restore_file | basename }}:
+          node Ready after {{ etcd_restore_t_ready.stdout | int - etcd_restore_t0.stdout | int }} s,
+          all pods running after {{ etcd_restore_t_pods.stdout | int - etcd_restore_t0.stdout | int }} s
+          (from stopping rke2-server).

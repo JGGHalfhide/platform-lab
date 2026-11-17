@@ -169,8 +169,10 @@ Done (11/17): etcd restore drill on the build cluster: restored to the snapshot 
 sample DB identical, kube-bench 80/1. Outage 21m42s incl. detour: reset run via sudo labelled the
 restored files unconfined_u -> etcd "permission denied" (no AVC) -> restorecon -RF; db-0 stuck
 Pending after rke2-killall -> delete pod. Procedure now: reset via systemd-run (docs/recovery.md).
-Left on the node: /var/lib/rancher/rke2/server/db.drill-20261117T211657 (pre-drill data, kept).
-Week 7 left: tag v0.7 (acceptance met: both drills recorded, dashboards on both clusters).
+`make etcd-restore SNAPSHOT=<name> CONFIRM=yes` (ansible/etcd-restore.yml): clean re-run RTO 2m51s
+(node Ready 105 s, pods 166 s), no manual step. NEVER move/delete server/db by hand: it holds
+snapshots/ (deleting the pre-drill copy lost that day's scheduled snapshots; manual ones on host).
+Week 7 tagged v0.7 (11/17). Next: Week 8 (polish and publish).
 GitHub Actions item deferred to Week 8. Post 2 is the user's to write.
 Reminders for Week 8 (in ROADMAP.md): circle back to the deferred Week 4 GitHub Actions
 workflow; remind the user about docs/stack.md (full tech stack spec with each tool's use

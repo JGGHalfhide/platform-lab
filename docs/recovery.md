@@ -1,8 +1,8 @@
 # Recovery
 
 Backups and restores for the build cluster, with measured times: an etcd
-snapshot restore of the whole cluster and a Velero restore of one
-namespace.
+snapshot restore of the whole cluster (RTO 2 min 51 s) and a Velero restore
+of one namespace (RTO 22 s).
 
 ## etcd snapshots
 
@@ -51,13 +51,11 @@ snapshot); sample database identical (`1000|8e64511e...`); policy reports
 514 pass / 0 fail; kube-bench 80 pass / 1 fail, unchanged
 (`docs/scans/week7-etcd-restore-kube-bench.txt`).
 
-**Measured outage: 21m42s** to all apps healthy, 27m23s to the database pod.
-Most of it was the detour below. Without it, the steps take about
-6 s (restore) + ~80 s (start to node Ready) + ~12 s (apps) + about a minute
-for stuck pods: **an estimated RTO of about 3 minutes**, not yet measured end
-to end.
+**Measured outage: 21m42s** to all apps healthy, 27m23s to the database pod,
+almost all of it the detour below. The second run (playbook, below) measured
+the procedure itself: 2 min 51 s.
 
-What went wrong, and what the procedure now does:
+What went wrong in the first run (all now handled by the playbook):
 
 1. **SELinux user on restored files.** The reset ran from an interactive
    root shell (Ansible `sudo`), so the files it wrote got the SELinux user
@@ -74,24 +72,43 @@ What went wrong, and what the procedure now does:
 3. **One reset is enough.** The first reset had already reset the
    membership; a second one stops with "membership was previously reset".
 
-### Procedure (single server)
+### Second run: the playbook (11/17)
+
+`make etcd-restore SNAPSHOT=<name> CONFIRM=yes` (`ansible/etcd-restore.yml`)
+builds in everything the first run taught: snapshot copied out of
+`server/db`, `server/db` never moved, reset through `systemd-run`,
+`restorecon -RF`, stuck pods recreated after a 60 s grace period (never
+their PVCs), and its own timing. Same marker test (`drill2-before`,
+snapshot `drill2`, `drill2-after`):
+
+| Measure (from stopping rke2-server) | Time |
+|---|---|
+| Node Ready | 105 s |
+| All pods running | 166 s |
+| All Argo CD apps Synced/Healthy and `db-0` Ready | 171 s |
+
+Result: `drill2-before` present, `drill2-after` absent; sample database
+identical; 0 pods not running; snapshots `drill2` and `post-drill` still on
+the node afterwards. No manual step.
+
+**Measured RTO, full etcd restore of the build cluster: 2 min 51 s.**
+
+### Procedure
 
 ```bash
-# On the node, as root. Copy the snapshot out of server/db first: RKE2 keeps
-# its snapshots inside the data directory.
-SNAP=/var/lib/rancher/rke2/server/db/snapshots/<name>.zip
-cp -a "$SNAP" /var/lib/rancher/rke2/restore.zip
-systemctl stop rke2-server
-rke2-killall.sh
-systemd-run --wait --collect --unit=rke2-restore \
-  rke2 server --cluster-reset --cluster-reset-restore-path=/var/lib/rancher/rke2/restore.zip
-restorecon -R -F /var/lib/rancher/rke2/server/db      # belt and braces
-systemctl start rke2-server
+make etcd-snapshots                                   # pick a snapshot
+make etcd-restore SNAPSHOT=<name> CONFIRM=yes         # LIMIT=airgap_servers for the iMac
 ```
 
-Then, from the build host: wait for the node and Argo CD apps; delete any
-pod left Pending/Unknown with a terminated container (`kubectl delete pod`,
-never its PVC).
+Everything written to etcd after the snapshot is lost; volume data on disk
+is not in etcd and is kept. The playbook refuses to run without both
+`SNAPSHOT` and `CONFIRM=yes`.
+
+**Never move or delete `server/db` by hand.** It holds `snapshots/` too:
+after the first drill, deleting the moved-aside pre-drill directory also
+deleted the node's scheduled snapshots of that day (the two manual ones
+survived as copies on the build host, `build/etcd-snapshots/`). The reset
+only replaces `server/db/etcd`.
 
 ## Velero
 

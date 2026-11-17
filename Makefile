@@ -1,7 +1,7 @@
 .PHONY: host up inventory down verify argocd bench stig-scan image policy-test \
 	rehearsal airgap-stage airgap-packages airgap-up airgap-disconnect airgap-reconnect \
 	airgap-deploy airgap-verify etcd-snapshot etcd-snapshots backup-store \
-	airgap-link-status airgap-link-share airgap-link-cut airgap-link-uncut
+	airgap-link-status airgap-link-share airgap-link-cut airgap-link-uncut etcd-restore
 
 # Node NIC and its reserved DHCP address (host-bootstrap reserves the address,
 # Terraform sets the MAC). registry.platform-lab.internal resolves to NODE_IP.
@@ -148,6 +148,14 @@ backup-store:
 # On-demand etcd snapshot, copied to build/etcd-snapshots/<host>/.
 etcd-snapshot:
 	cd ansible && ansible-playbook etcd-snapshot.yml --limit $(LIMIT) -e etcd_snapshot_name=$(or $(SNAPSHOT),manual)
+
+# Restore etcd from a snapshot on the node (destructive: the cluster returns to
+# the snapshot). ansible/etcd-restore.yml; docs/recovery.md.
+etcd-restore:
+	@test -n "$(SNAPSHOT)" || { echo "usage: make etcd-restore SNAPSHOT=<name> CONFIRM=yes [LIMIT=...]"; exit 1; }
+	@test "$(CONFIRM)" = yes || { echo "refusing without CONFIRM=yes (the cluster returns to snapshot $(SNAPSHOT))"; exit 1; }
+	cd ansible && ansible-playbook etcd-restore.yml --limit $(LIMIT) \
+	  -e etcd_restore_snapshot=$(SNAPSHOT) -e etcd_restore_confirm=yes
 
 # Snapshots RKE2 knows about (scheduled and on-demand).
 etcd-snapshots:
