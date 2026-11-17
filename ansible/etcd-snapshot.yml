@@ -1,0 +1,54 @@
+---
+# On-demand etcd snapshot, copied to the build host.
+#   ansible-playbook etcd-snapshot.yml -e etcd_snapshot_name=<name>
+# (make etcd-snapshot SNAPSHOT=<name> [LIMIT=airgap_servers])
+# Lands in build/etcd-snapshots/<host>/ (gitignored). RKE2 appends the node
+# name and a timestamp to the name.
+- name: On-demand etcd snapshot
+  hosts: rke2_servers
+  become: true
+  vars:
+    etcd_snapshot_name: manual
+    etcd_snapshot_dir: /var/lib/rancher/rke2/server/db/snapshots
+    etcd_snapshot_dest: "{{ playbook_dir }}/../build/etcd-snapshots/{{ inventory_hostname }}/"
+  tasks:
+    - name: Save a snapshot
+      ansible.builtin.command:
+        cmd: /usr/bin/rke2 etcd-snapshot save --name {{ etcd_snapshot_name }}
+      register: etcd_snapshot_save
+      changed_when: true
+
+    - name: Find the new snapshot
+      ansible.builtin.find:
+        paths: "{{ etcd_snapshot_dir }}"
+        patterns: "{{ etcd_snapshot_name }}-*"
+      register: etcd_snapshot_files
+
+    - name: Pick the newest
+      ansible.builtin.set_fact:
+        etcd_snapshot_file: "{{ (etcd_snapshot_files.files | sort(attribute='mtime') | last).path }}"
+
+    - name: Copy it to the build host
+      ansible.builtin.fetch:
+        src: "{{ etcd_snapshot_file }}"
+        dest: "{{ etcd_snapshot_dest }}"
+        flat: true
+
+    # The whole cluster state (Secrets are encrypted at rest by RKE2's CIS
+    # profile, but the file stays owner-only).
+    - name: Restrict the copy on the build host
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - {path: "{{ playbook_dir }}/../build/etcd-snapshots", mode: "0700"}
+        - {path: "{{ etcd_snapshot_dest }}", mode: "0700"}
+        - {path: "{{ etcd_snapshot_dest }}{{ etcd_snapshot_file | basename }}", mode: "0600"}
+      loop_control:
+        label: "{{ item.path | basename }}"
+      delegate_to: localhost
+      become: false
+
+    - name: Show the snapshot
+      ansible.builtin.debug:
+        msg: "{{ etcd_snapshot_file | basename }} -> {{ etcd_snapshot_dest }}"

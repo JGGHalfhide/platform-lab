@@ -1,6 +1,6 @@
 .PHONY: host up inventory down verify argocd bench stig-scan image policy-test \
 	rehearsal airgap-stage airgap-packages airgap-up airgap-disconnect airgap-reconnect \
-	airgap-deploy airgap-verify
+	airgap-deploy airgap-verify etcd-snapshot etcd-snapshots
 
 # Node NIC and its reserved DHCP address (host-bootstrap reserves the address,
 # Terraform sets the MAC). registry.platform-lab.internal resolves to NODE_IP.
@@ -122,3 +122,13 @@ airgap-deploy:
 airgap-verify:
 	kubectl --kubeconfig kubeconfig-airgap get nodes -o wide
 	kubectl --kubeconfig kubeconfig-airgap get pods -A
+
+# --- Recovery (Week 7; docs/recovery.md) ------------------------------------
+
+# On-demand etcd snapshot, copied to build/etcd-snapshots/<host>/.
+etcd-snapshot:
+	cd ansible && ansible-playbook etcd-snapshot.yml --limit $(LIMIT) -e etcd_snapshot_name=$(or $(SNAPSHOT),manual)
+
+# Snapshots RKE2 knows about (scheduled and on-demand).
+etcd-snapshots:
+	kubectl --kubeconfig kubeconfig get etcdsnapshotfiles -o custom-columns=NAME:.spec.snapshotName,CREATED:.status.creationTime,SIZE:.status.size

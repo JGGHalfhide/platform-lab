@@ -25,6 +25,13 @@ rke2_config:
   service-cidr: "{{ rke2_service_cidr }}"
   tls-san:
     - "{{ ansible_host | default(inventory_hostname) }}"
+  # etcd snapshots (docs/recovery.md): every 6 hours, 12 kept (3 days),
+  # zstd-compressed, in /var/lib/rancher/rke2/server/db/snapshots.
+  # `make etcd-snapshot SNAPSHOT=...` takes one on demand and copies it to the
+  # build host, so a restore does not depend on the node's disk.
+  etcd-snapshot-schedule-cron: "0 */6 * * *"
+  etcd-snapshot-retention: 12
+  etcd-snapshot-compress: true
 
 # Admin kubeconfig copied to the controller (repo root; gitignored).
 rke2_kubeconfig_dest: "{{ playbook_dir }}/../kubeconfig"
