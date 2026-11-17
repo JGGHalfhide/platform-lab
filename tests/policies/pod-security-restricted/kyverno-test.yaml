@@ -11,6 +11,7 @@ exceptions:
 - ../../../gitops/policies/exception-local-path-helper.yaml
 - ../../../gitops/policies/exception-kube-bench.yaml
 - ../../../gitops/policies/exception-velero-node-agent.yaml
+- ../../../gitops/policies/exception-node-exporter.yaml
 results:
 - policy: pod-security-restricted
   resources:
@@ -134,6 +135,11 @@ results:
   result: fail
 - policy: pod-security-restricted
   resources:
+  - host-network-node-exporter-other-ns
+  kind: Pod
+  result: fail
+- policy: pod-security-restricted
+  resources:
   - helper-pod-delete-pvc-1
   kind: Pod
   result: skip
@@ -150,5 +156,10 @@ results:
 - policy: pod-security-restricted
   resources:
   - velero-hosting-pod-root
+  kind: Pod
+  result: skip
+- policy: pod-security-restricted
+  resources:
+  - node-exporter-host-network
   kind: Pod
   result: skip

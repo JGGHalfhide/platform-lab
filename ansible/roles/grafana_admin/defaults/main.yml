@@ -1,0 +1,13 @@
+---
+# Grafana's admin login (Secret grafana-admin, keys admin-user and
+# admin-password), created from Vault on both clusters before the
+# monitoring stack is deployed. Grafana reads it from files ($__file{},
+# gitops/values/kube-prometheus-stack.yaml), not from env (STIG V-242415).
+grafana_admin_namespace: monitoring
+grafana_admin_secret: grafana-admin
+# Not the default `admin`.
+grafana_admin_user: platform-admin
+grafana_admin_password: "{{ vault_grafana_admin_password }}"
+
+grafana_admin_kubectl: >-
+  /var/lib/rancher/rke2/bin/kubectl --kubeconfig /etc/rancher/rke2/rke2.yaml

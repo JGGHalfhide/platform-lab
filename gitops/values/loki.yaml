@@ -1,0 +1,94 @@
+# Loki values (chart 7.5.0, Loki 3.6.16), build cluster
+# (gitops/apps/loki.yaml); shared with the airgapped cluster's Zarf package.
+#
+# Smallest workable layout for a single node: one single-binary pod,
+# filesystem storage on a local-path volume (no object store), 7 days of
+# logs. No memcached caches, gateway, canary or self-monitoring extras.
+# Logs arrive from Alloy (gitops/values/alloy.yaml). Loki never calls the
+# Kubernetes API (rules sidecar off), so no token at all.
+deploymentMode: SingleBinary
+
+loki:
+  # One tenant; the API is only reachable inside the cluster.
+  auth_enabled: false
+  commonConfig:
+    replication_factor: 1
+  storage:
+    type: filesystem
+  schemaConfig:
+    configs:
+      - from: "2026-11-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: index_
+          period: 24h
+  limits_config:
+    retention_period: 168h
+  compactor:
+    retention_enabled: true
+    delete_request_store: filesystem
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+    fsGroup: 10001
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+
+serviceAccount:
+  automountServiceAccountToken: false
+
+singleBinary:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      memory: 768Mi
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: local-path
+
+read:
+  replicas: 0
+write:
+  replicas: 0
+backend:
+  replicas: 0
+
+gateway:
+  enabled: false
+chunksCache:
+  enabled: false
+resultsCache:
+  enabled: false
+lokiCanary:
+  enabled: false
+test:
+  enabled: false
+sidecar:
+  rules:
+    enabled: false
+
+# Prometheus scrapes Loki's own metrics; no self-monitoring stack (it would
+# install another log agent).
+monitoring:
+  selfMonitoring:
+    enabled: false
+    grafanaAgent:
+      installOperator: false
+  serviceMonitor:
+    enabled: true
+  dashboards:
+    enabled: false
+  rules:
+    enabled: false

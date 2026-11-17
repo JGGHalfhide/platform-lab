@@ -21,7 +21,8 @@ spec:
   matchConditions:
     - name: platform-namespaces
       expression: >-
-        object.metadata.namespace in ['argocd', 'zot', 'kyverno', 'local-path-storage', 'velero']
+        object.metadata.namespace in ['argocd', 'zot', 'kyverno', 'local-path-storage', 'velero',
+          'monitoring', 'monitoring-node']
   allowedValues:
     # argocd
     - "quay.io/argoproj/argocd:"
@@ -40,6 +41,16 @@ spec:
     # the platform registry instead (gitops/velero/restore-helper-config.yaml).
     - "docker.io/velero/velero:"
     - "docker.io/velero/velero-plugin-for-aws:"
+    # monitoring, monitoring-node (kube-prometheus-stack, Loki, Alloy)
+    - "quay.io/prometheus/prometheus:"
+    - "quay.io/prometheus-operator/prometheus-operator:"
+    - "quay.io/prometheus-operator/prometheus-config-reloader:"
+    - "quay.io/prometheus/node-exporter:"
+    - "registry.k8s.io/kube-state-metrics/kube-state-metrics:"
+    - "docker.io/grafana/grafana:"
+    - "quay.io/kiwigrid/k8s-sidecar:"
+    - "docker.io/grafana/loki:"
+    - "docker.io/grafana/alloy:"
     # local-path-storage (provisioner and its helper pods)
     - "docker.io/rancher/local-path-provisioner:"
     - "docker.io/library/busybox:"

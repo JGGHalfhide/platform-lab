@@ -1,0 +1,49 @@
+---
+# Same pattern as registry_auth: kubectl diff exits 0 when the live object
+# matches, 1 when it differs or is missing; apply only then, so a second run
+# reports no changes. Server-side apply keeps the data out of annotations.
+- name: Check for the monitoring namespace
+  ansible.builtin.command:
+    cmd: "{{ grafana_admin_kubectl }} get namespace {{ grafana_admin_namespace }}"
+  register: grafana_admin_ns
+  changed_when: false
+  failed_when: false
+
+- name: Create the monitoring namespace
+  ansible.builtin.command:
+    cmd: "{{ grafana_admin_kubectl }} create namespace {{ grafana_admin_namespace }}"
+  when: grafana_admin_ns.rc != 0
+  changed_when: true
+
+- name: Render the grafana-admin Secret
+  ansible.builtin.set_fact:
+    grafana_admin_manifest:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: "{{ grafana_admin_secret }}"
+        namespace: "{{ grafana_admin_namespace }}"
+        labels:
+          app.kubernetes.io/part-of: monitoring
+      type: Opaque
+      stringData:
+        admin-user: "{{ grafana_admin_user }}"
+        admin-password: "{{ grafana_admin_password }}"
+  no_log: true
+
+- name: Compare with the cluster
+  ansible.builtin.command:
+    cmd: "{{ grafana_admin_kubectl }} diff --server-side -f -"
+    stdin: "{{ grafana_admin_manifest | to_json }}"
+  register: grafana_admin_diff
+  changed_when: false
+  failed_when: grafana_admin_diff.rc > 1
+  no_log: true
+
+- name: Apply the grafana-admin Secret
+  ansible.builtin.command:
+    cmd: "{{ grafana_admin_kubectl }} apply --server-side -f -"
+    stdin: "{{ grafana_admin_manifest | to_json }}"
+  when: grafana_admin_diff.rc == 1
+  changed_when: true
+  no_log: true

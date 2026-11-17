@@ -11,6 +11,7 @@ exceptions:
 - ../../../gitops/policies/exception-local-path-helper.yaml
 - ../../../gitops/policies/exception-kube-bench.yaml
 - ../../../gitops/policies/exception-velero-node-agent.yaml
+- ../../../gitops/policies/exception-node-exporter.yaml
 results:
 - policy: disallow-host-path
   resources:
@@ -49,6 +50,16 @@ results:
   result: fail
 - policy: disallow-host-path
   resources:
+  - node-exporter-label-other-ns
+  kind: Pod
+  result: fail
+- policy: disallow-host-path
+  resources:
+  - not-node-exporter-in-monitoring-node
+  kind: Pod
+  result: fail
+- policy: disallow-host-path
+  resources:
   - not-node-agent-in-velero
   kind: Pod
   result: fail
@@ -70,5 +81,10 @@ results:
 - policy: disallow-host-path
   resources:
   - velero-hosting-pod-host-pods
+  kind: Pod
+  result: skip
+- policy: disallow-host-path
+  resources:
+  - node-exporter-proc
   kind: Pod
   result: skip

@@ -1,0 +1,25 @@
+# node-exporter reads node metrics with host network, host PID and read-only
+# hostPath mounts of /proc, /sys and /, which disallow-host-path and the
+# restricted Pod Security policy reject. This matches the namespace's Pod
+# Security exemption (enforce=privileged, gitops/monitoring/namespaces.yaml).
+# It runs as non-root, with no capabilities, no privilege escalation and a
+# read-only root, so the other policies still pass. Only node-exporter, in
+# monitoring-node: its pods by label, its DaemonSet (autogen) by name.
+apiVersion: policies.kyverno.io/v1
+kind: PolicyException
+metadata:
+  name: node-exporter
+  namespace: kyverno
+spec:
+  policyRefs:
+    - name: disallow-host-path
+      kind: ValidatingPolicy
+    - name: pod-security-restricted
+      kind: ValidatingPolicy
+  matchConditions:
+    - name: node-exporter
+      expression: >-
+        object.metadata.namespace == 'monitoring-node' && (
+          (object.kind == 'Pod' &&
+           object.metadata.?labels.orValue({})[?'app.kubernetes.io/name'].orValue('') == 'prometheus-node-exporter') ||
+          (object.kind == 'DaemonSet' && object.metadata.name == 'kps-prometheus-node-exporter'))

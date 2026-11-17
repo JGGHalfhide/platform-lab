@@ -23,6 +23,7 @@
     - openscap
     - rke2
     - sample_app_secret
+    - grafana_admin
 
 # Build cluster only: Secrets for the in-cluster registry and Argo CD, which
 # the airgapped cluster does not run (Zarf brings its own registry), and for

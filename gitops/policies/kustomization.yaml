@@ -10,6 +10,7 @@ resources:
   - disallow-secret-env.yaml
   - exception-kube-bench.yaml
   - exception-local-path-helper.yaml
+  - exception-node-exporter.yaml
   - exception-platform-bootstrap-images.yaml
   - exception-velero-node-agent.yaml
   - pod-security-restricted.yaml

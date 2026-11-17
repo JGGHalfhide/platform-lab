@@ -1,0 +1,26 @@
+# Namespaces and Grafana dashboards for the monitoring stack. The dashboards
+# (JSON in dashboards/) become ConfigMaps labelled grafana_dashboard, which
+# Grafana's dashboard sidecar loads into the "platform-lab" folder.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespaces.yaml
+generatorOptions:
+  disableNameSuffixHash: true
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: platform-lab
+configMapGenerator:
+  - name: dashboard-node
+    namespace: monitoring
+    files:
+      - dashboards/node.json
+  - name: dashboard-etcd
+    namespace: monitoring
+    files:
+      - dashboards/etcd.json
+  - name: dashboard-policy-reports
+    namespace: monitoring
+    files:
+      - dashboards/policy-reports.json

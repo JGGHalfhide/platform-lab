@@ -1,0 +1,40 @@
+# alloy (chart 1.15.0), monitoring namespace; values in
+# gitops/values/alloy.yaml (shared with the airgapped cluster's Zarf
+# package). See docs/observability.md.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: alloy
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: alloy
+      targetRevision: 1.15.0
+      helm:
+        releaseName: alloy
+        valueFiles:
+          - $repo/gitops/values/alloy.yaml
+    # Source of the chart values ($repo) only.
+    - repoURL: https://github.com/JGGHalfhide/platform-lab.git
+      targetRevision: main
+      ref: repo
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      # Large CRDs (kube-prometheus-stack) exceed the client-side apply limit.
+      - ServerSideApply=true
+      # ServiceMonitors before the Prometheus Operator CRDs exist.
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m

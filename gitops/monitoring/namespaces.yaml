@@ -1,0 +1,36 @@
+# Monitoring stack (kube-prometheus-stack, Loki, Alloy) runs restricted.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+---
+# Pod Security exemption: node-exporter alone, with host network, host PID
+# and read-only hostPath mounts of /proc, /sys and / for node metrics.
+# Enforce privileged here only; warn and audit stay at restricted. The pod
+# itself runs as non-root with no capabilities and no privilege escalation.
+# Kyverno: PolicyException node-exporter (gitops/policies).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring-node
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted
+  annotations:
+    platform-lab/pss-exception: "node-exporter needs host network, PID and /proc, /sys, / (read-only)"
+---
+# CIS 5.1.5: no token for the namespaces' default ServiceAccounts.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: default
+  namespace: monitoring
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: default
+  namespace: monitoring-node
+automountServiceAccountToken: false

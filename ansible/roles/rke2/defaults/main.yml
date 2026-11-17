@@ -32,6 +32,10 @@ rke2_config:
   etcd-snapshot-schedule-cron: "0 */6 * * *"
   etcd-snapshot-retention: 12
   etcd-snapshot-compress: true
+  # etcd metrics on :2381 (plain HTTP, metrics only) for Prometheus and the
+  # etcd dashboard (docs/observability.md). firewalld does not open 2381 in
+  # the public zone: only the node and pods (trusted zone) reach it.
+  etcd-expose-metrics: true
 
 # Admin kubeconfig copied to the controller (repo root; gitignored).
 rke2_kubeconfig_dest: "{{ playbook_dir }}/../kubeconfig"

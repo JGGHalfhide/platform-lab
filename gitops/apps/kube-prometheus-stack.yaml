@@ -1,0 +1,42 @@
+# kube-prometheus-stack (chart 92.17.0), monitoring namespace; values in
+# gitops/values/kube-prometheus-stack.yaml (shared with the airgapped cluster's Zarf
+# package). See docs/observability.md.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: kube-prometheus-stack
+      targetRevision: 92.17.0
+      helm:
+        releaseName: kps
+        valueFiles:
+          - $repo/gitops/values/kube-prometheus-stack.yaml
+    # Also the namespaces and dashboards (gitops/monitoring), and the source
+    # of the chart values ($repo).
+    - repoURL: https://github.com/JGGHalfhide/platform-lab.git
+      targetRevision: main
+      path: gitops/monitoring
+      ref: repo
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      # Large CRDs (kube-prometheus-stack) exceed the client-side apply limit.
+      - ServerSideApply=true
+      # ServiceMonitors before the Prometheus Operator CRDs exist.
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m

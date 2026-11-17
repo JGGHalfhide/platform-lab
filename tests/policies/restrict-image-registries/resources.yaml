@@ -162,6 +162,38 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
+  name: prometheus-upstream
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: web
+spec:
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: app
+    image: quay.io/prometheus/prometheus:v3.15.1-distroless
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+    resources:
+      requests:
+        cpu: 10m
+        memory: 16Mi
+      limits:
+        memory: 32Mi
+  volumes:
+  - name: tmp
+    emptyDir: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
   name: kube-bench-image
   namespace: kube-bench
   labels:
@@ -447,6 +479,38 @@ spec:
   containers:
   - name: app
     image: docker.io/velero/velero:v1.18.4
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+    resources:
+      requests:
+        cpu: 10m
+        memory: 16Mi
+      limits:
+        memory: 32Mi
+  volumes:
+  - name: tmp
+    emptyDir: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: prometheus-image-in-apps
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: web
+spec:
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: app
+    image: quay.io/prometheus/prometheus:v3.15.1-distroless
     securityContext:
       allowPrivilegeEscalation: false
       capabilities:
