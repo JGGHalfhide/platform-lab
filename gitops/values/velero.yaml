@@ -55,7 +55,7 @@ containerSecurityContext:
 serviceAccount:
   server:
     automountServiceAccountToken: false
-extraVolumes: &token-volume
+extraVolumes:
   - name: kube-api-access
     projected:
       defaultMode: 0444
@@ -73,7 +73,7 @@ extraVolumes: &token-volume
               - path: namespace
                 fieldRef:
                   fieldPath: metadata.namespace
-extraVolumeMounts: &token-mount
+extraVolumeMounts:
   - name: kube-api-access
     mountPath: /var/run/secrets/kubernetes.io/serviceaccount
     readOnly: true
@@ -124,8 +124,34 @@ nodeAgent:
       add: ["CHOWN", "DAC_OVERRIDE", "DAC_READ_SEARCH", "FOWNER", "FSETID"]
     seLinuxOptions:
       type: spc_t
-  extraVolumes: *token-volume
-  extraVolumeMounts: *token-mount
+  # Projected token as for the server, plus a writable /tmp (it writes a
+  # credentials file there; the root filesystem stays read-only).
+  extraVolumes:
+    - name: kube-api-access
+      projected:
+        defaultMode: 0444
+        sources:
+          - serviceAccountToken:
+              path: token
+              expirationSeconds: 3607
+          - configMap:
+              name: kube-root-ca.crt
+              items:
+                - key: ca.crt
+                  path: ca.crt
+          - downwardAPI:
+              items:
+                - path: namespace
+                  fieldRef:
+                    fieldPath: metadata.namespace
+    - name: tmp
+      emptyDir: {}
+  extraVolumeMounts:
+    - name: kube-api-access
+      mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      readOnly: true
+    - name: tmp
+      mountPath: /tmp
 
 metrics:
   enabled: true
