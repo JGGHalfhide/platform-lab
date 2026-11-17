@@ -1,0 +1,28 @@
+# Managed by scripts/backup-store.sh (platform-lab); do not edit.
+# Single-node Garage on the build host: S3 store for Velero backups.
+# Only the S3 API is reachable from the VMs, on the libvirt bridge; RPC and
+# admin stay on localhost. Not reachable from the LAN.
+
+replication_factor = 1
+
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+metadata_snapshots_dir = "/var/lib/garage/snapshots"
+db_engine = "lmdb"
+
+rpc_secret = "${rpc_secret}"
+rpc_bind_addr = "127.0.0.1:3901"
+rpc_public_addr = "127.0.0.1:3901"
+
+allow_world_readable_secrets = false
+
+[s3_api]
+api_bind_addr = "${s3_bind}"
+s3_region = "garage"
+root_domain = ".s3.garage.localhost"
+
+[admin]
+api_bind_addr = "127.0.0.1:3903"
+admin_token = "${admin_token}"
+metrics_token = "${metrics_token}"
+metrics_require_token = true

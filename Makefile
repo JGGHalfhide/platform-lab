@@ -1,6 +1,6 @@
 .PHONY: host up inventory down verify argocd bench stig-scan image policy-test \
 	rehearsal airgap-stage airgap-packages airgap-up airgap-disconnect airgap-reconnect \
-	airgap-deploy airgap-verify etcd-snapshot etcd-snapshots
+	airgap-deploy airgap-verify etcd-snapshot etcd-snapshots backup-store
 
 # Node NIC and its reserved DHCP address (host-bootstrap reserves the address,
 # Terraform sets the MAC). registry.platform-lab.internal resolves to NODE_IP.
@@ -124,6 +124,10 @@ airgap-verify:
 	kubectl --kubeconfig kubeconfig-airgap get pods -A
 
 # --- Recovery (Week 7; docs/recovery.md) ------------------------------------
+
+# Local S3 store for Velero: Garage on the build host (sudo; idempotent).
+backup-store:
+	./scripts/backup-store.sh
 
 # On-demand etcd snapshot, copied to build/etcd-snapshots/<host>/.
 etcd-snapshot:
