@@ -144,6 +144,13 @@ gitops/sample-app (podinfo + PostgreSQL, sample-db Secret from Vault via sample_
 postgres gosu CVEs excepted in .trivyignore.yaml. Kyverno values in gitops/values/kyverno.yaml.
 Next: install Rocky 9 on the iMac (runbook section 1), then `make inventory AIRGAP_IP=<ip>` and
 repeat the runbook; ask before blocking the iMac's egress. Then tag v0.6.
+Week 7 started early (11/16, iMac not ready): build VM 12 GiB; etcd snapshots every 6 h
+(`make etcd-snapshot SNAPSHOT=...`); Garage S3 store on the build host (`make backup-store`,
+192.168.122.1:3900, bucket velero); Velero 1.18.4 via Argo CD (privileged hosting pods for
+SELinux, scoped exceptions); local-path now creates `local` volumes (helper runs spc_t).
+Velero drill: backup 20 s, restore 22 s, data verified (docs/recovery.md).
+Before the iMac run: `make airgap-stage` again (local-path manifest changed); Week 6 packages unchanged.
+Week 7 left: monitoring stack + dashboards (+ Zarf package), etcd restore drill (ask first), tag v0.7.
 GitHub Actions item deferred to Week 8. Post 2 is the user's to write.
 Reminders for Week 8 (in ROADMAP.md): circle back to the deferred Week 4 GitHub Actions
 workflow; remind the user about docs/stack.md (full tech stack spec with each tool's use
