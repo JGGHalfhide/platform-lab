@@ -221,14 +221,14 @@ Week 5 in ROADMAP.md. Write the Kyverno policy set under gitops/policies/ with k
 
 Goal: the same platform runs on the iMac cluster with no internet access.
 
-- [ ] iMac: Rocky Linux 9 installed, base and hardening roles applied (adjust inventory), single-node RKE2 installed from airgap artifacts (RKE2 images tarball + install script staged over scp)
-- [ ] Zarf installed on the build host (`zarf version` recorded)
-- [ ] Zarf package definitions under `zarf/` for: platform components, Kyverno policies, sample app
-- [ ] `zarf package create` on the connected host; transfer the package file to the iMac via scp/USB
-- [ ] Disconnect: firewall rule blocking egress on the iMac; prove with a failing `curl`
-- [ ] `zarf init` and `zarf package deploy` on the iMac with the network blocked
-- [ ] Sample app runs; unsigned image still rejected by policy
-- [ ] `docs/airgap-runbook.md`: exact step list
+- [ ] iMac: Rocky Linux 9 installed, base and hardening roles applied (adjust inventory), single-node RKE2 installed from airgap artifacts (RKE2 images tarball + install script staged over scp). Decided 11/16: staged RPMs + images tarball instead of install.sh (same layout as the build node). `airgap_servers` group, `make airgap-stage` / `make airgap-up`. Rehearsed 11/16 on the airgap-rehearsal VM (docs/airgap-runbook.md); iMac run pending.
+- [x] Zarf installed on the build host (`zarf version` recorded): v0.89.0 (11/16; 1.0.0 was days old)
+- [x] Zarf package definitions under `zarf/` for: platform components, Kyverno policies, sample app (11/16: zarf/platform, zarf/policies, zarf/sample-app; shared sources with gitops/)
+- [ ] `zarf package create` on the connected host; transfer the package file to the iMac via scp/USB. Create done 11/16 (`make airgap-packages`, signed with the lab cosign key); transfer by `make airgap-deploy`. Rehearsed 11/16 on the airgap-rehearsal VM (docs/airgap-runbook.md); iMac run pending.
+- [ ] Disconnect: firewall rule blocking egress on the iMac; prove with a failing `curl` (`make airgap-disconnect`, firewalld policies). Rehearsed 11/16 on the airgap-rehearsal VM (docs/airgap-runbook.md); iMac run pending.
+- [ ] `zarf init` and `zarf package deploy` on the iMac with the network blocked (`make airgap-deploy`). Rehearsed 11/16 on the airgap-rehearsal VM (docs/airgap-runbook.md); iMac run pending.
+- [ ] Sample app runs; unsigned image still rejected by policy (tests/airgap/). Rehearsed 11/16 on the airgap-rehearsal VM (docs/airgap-runbook.md); iMac run pending.
+- [ ] `docs/airgap-runbook.md`: exact step list (drafted 11/16 from the rehearsal; final after the iMac run)
 - [ ] Tag `v0.6`; publish Post 3 (airgap deploy)
 
 Acceptance: platform and sample app come up on the iMac with egress blocked and no image pull errors.
@@ -296,7 +296,7 @@ Decide these before the week that depends on them.
 - **iMac memory (Week 6-7).** 8 GB is tight for RKE2 plus Argo CD, Kyverno, a registry, Prometheus and Loki. Expect to trim (for example, no Argo CD on the target, since Zarf deploys) or set small resource limits.
 - **SBOM attestation at admission (open, upstream).** Kyverno 1.19/1.20 reject every tag-based cosign attestation when the transparency log is ignored (kyverno/kyverno#17109). Admission checks signatures only; `make image` verifies the SBOM attestation at publish time. When a fixed Kyverno ships, add a `verifyAttestationSignatures` validation for `https://spdx.dev/Document` to `gitops/policies/verify-platform-images.yaml`.
 - **STIG V-242415, Secrets in env vars. Fixed 11/16 (user's call: before tagging v0.5).** Argo CD reads the Redis password from the mounted Secret (`REDIS_CREDS_DIR_PATH`, supported in 3.6.1), Redis builds its `requirepass` config on an in-memory emptyDir at startup (the password was also on its command line), files 0440 with `fsGroup: 999`. New Enforce policy `disallow-secret-env`. Gotcha: removing a field from `gitops/argocd/` on a running cluster needs `make argocd` again, because the bootstrap `kubectl apply --server-side` still owns the field and Argo CD's server-side apply cannot remove it (a fresh build is unaffected).
-- **Zarf and Kyverno image verification (Week 6).** Zarf rewrites image references to its own in-cluster registry. Test early that the `verifyImages` policy still admits signed images after the rewrite.
+- **Zarf and Kyverno image verification (Week 6). Resolved 11/16 (rehearsal).** Signed images keep their signatures through Zarf once the `.sig`/`.att` tags are listed in the package (`zarf package create` does not add them). Kyverno also checks Deployments as written in Git (`127.0.0.1:30500`), so the airgap variant of `verify-platform-images` (zarf/policies) maps both `127.0.0.1:30500` and `127.0.0.1:31999` to the Zarf registry Service with a pull Secret. Upstream platform images rewritten by Zarf get a scoped PolicyException; see docs/airgap-runbook.md.
 
 ---
 

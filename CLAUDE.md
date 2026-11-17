@@ -130,7 +130,20 @@ Removing fields from gitops/argocd/ on a live cluster needs `make argocd` (SSA f
 Done (11/16): rebuild 9m13s (argocd_redis_auth role creates the argocd-redis Secret from Vault:
 the mounted Secret otherwise deadlocks a fresh build); kube-bench now runs under Enforce via
 scoped PolicyExceptions; kube-bench 80/1, STIG 398/29. Week 5 tagged v0.5.
-Next: Week 6 (airgap deployment to the iMac).
+Week 6 (airgap):
+Done (11/16): Zarf v0.89.0 on the build host. Rehearsal VM `airgap-rehearsal` (8 GiB, 192.168.122.20,
+Terraform module `airgap_rehearsal`; VMs now in modules/rocky-vm). Inventory groups build_servers /
+airgap_servers (children of rke2_servers); `make up` limits to build_servers.
+Done (11/16): `make airgap-stage` (RKE2 RPMs + images, local-path bootstrap, Zarf; build/airgap/),
+`make airgap-up` (rke2 role airgap mode, local-path via RKE2 manifests dir), `make airgap-disconnect`
+(firewalld policies), `make airgap-packages` (zarf/platform, policies, sample-app; signed with the
+lab cosign key via COSIGN_PASSWORD), `make airgap-deploy` (zarf role). Kubeconfig ./kubeconfig-airgap.
+Done (11/16): full flow proven on the rehearsal VM with egress blocked: 0 pull errors, signed images
+verified via the Zarf registry, unsigned rejected (docs/airgap-runbook.md). Sample app in
+gitops/sample-app (podinfo + PostgreSQL, sample-db Secret from Vault via sample_app_secret role);
+postgres gosu CVEs excepted in .trivyignore.yaml. Kyverno values in gitops/values/kyverno.yaml.
+Next: install Rocky 9 on the iMac (runbook section 1), then `make inventory AIRGAP_IP=<ip>` and
+repeat the runbook; ask before blocking the iMac's egress. Then tag v0.6.
 GitHub Actions item deferred to Week 8. Post 2 is the user's to write.
 Reminders for Week 8 (in ROADMAP.md): circle back to the deferred Week 4 GitHub Actions
 workflow; remind the user about docs/stack.md (full tech stack spec with each tool's use
@@ -138,3 +151,4 @@ and rationale, end-to-end workflow breakdown, Mermaid diagram).
 Post 1 (hardening results) is the user's to write.
 See ROADMAP.md for the checklist.
 Note: in Claude Code sessions run ansible with `</dev/null` (non-blocking IO error otherwise).
+Note: zarf on the airgap node is /opt/zarf/zarf (not on sudo's secure_path).
