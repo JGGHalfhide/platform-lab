@@ -73,10 +73,16 @@ extraVolumes:
               - path: namespace
                 fieldRef:
                   fieldPath: metadata.namespace
+  # Kopia writes its repository config to /udmrepo; the root filesystem is
+  # read-only.
+  - name: udmrepo
+    emptyDir: {}
 extraVolumeMounts:
   - name: kube-api-access
     mountPath: /var/run/secrets/kubernetes.io/serviceaccount
     readOnly: true
+  - name: udmrepo
+    mountPath: /udmrepo
 
 # Credentials file from the velero-s3 Secret (velero_secrets role, Vault),
 # mounted at /credentials/cloud; no Secret in environment variables.
@@ -124,8 +130,8 @@ nodeAgent:
       add: ["CHOWN", "DAC_OVERRIDE", "DAC_READ_SEARCH", "FOWNER", "FSETID"]
     seLinuxOptions:
       type: spc_t
-  # Projected token as for the server, plus a writable /tmp (it writes a
-  # credentials file there; the root filesystem stays read-only).
+  # Projected token as for the server, plus writable /tmp (credentials file)
+  # and /udmrepo (Kopia config); the root filesystem stays read-only.
   extraVolumes:
     - name: kube-api-access
       projected:
@@ -146,12 +152,16 @@ nodeAgent:
                     fieldPath: metadata.namespace
     - name: tmp
       emptyDir: {}
+    - name: udmrepo
+      emptyDir: {}
   extraVolumeMounts:
     - name: kube-api-access
       mountPath: /var/run/secrets/kubernetes.io/serviceaccount
       readOnly: true
     - name: tmp
       mountPath: /tmp
+    - name: udmrepo
+      mountPath: /udmrepo
 
 metrics:
   enabled: true
