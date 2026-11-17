@@ -274,12 +274,13 @@ grafana:
         foldersFromFilesStructure: true
       extraMounts: *token-mount
   extraContainerVolumes: *token-volume
+  # ~350 MiB at idle (Grafana 13); room for dashboard queries.
   resources:
     requests:
       cpu: 50m
-      memory: 128Mi
+      memory: 256Mi
     limits:
-      memory: 384Mi
+      memory: 640Mi
   # The chart's /var/lib/grafana emptyDir; dashboards come from Git.
   persistence:
     enabled: false
