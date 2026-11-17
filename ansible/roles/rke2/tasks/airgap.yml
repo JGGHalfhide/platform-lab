@@ -1,0 +1,104 @@
+---
+# Airgap install (rke2_airgap): RKE2 and the bootstrap images come only from
+# rke2_airgap_artifacts_dir on the controller (scripts/airgap-stage.sh).
+# container-selinux, a dependency of rke2-selinux, comes from Rocky AppStream
+# while the node is still connected (docs/airgap-runbook.md).
+
+- name: Install the Rancher RPM signing key
+  ansible.builtin.copy:
+    src: "{{ rke2_airgap_artifacts_dir }}/rke2/rancher-rke2.key"
+    dest: /etc/pki/rpm-gpg/RPM-GPG-KEY-rancher-rke2
+    owner: root
+    group: root
+    mode: "0644"
+
+# Same fingerprint check as the connected path.
+- name: Import the Rancher RPM signing key
+  ansible.builtin.rpm_key:
+    key: /etc/pki/rpm-gpg/RPM-GPG-KEY-rancher-rke2
+    fingerprint: "{{ rke2_gpg_key_fingerprint }}"
+
+- name: Create the RPM directory
+  ansible.builtin.file:
+    path: "{{ rke2_airgap_rpm_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Copy the staged RKE2 RPMs
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ rke2_airgap_rpm_dir }}/"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ query('ansible.builtin.fileglob', rke2_airgap_artifacts_dir ~ '/rke2/rpms/*.rpm') | sort }}"
+  loop_control:
+    label: "{{ item | basename }}"
+
+- name: Set the RPM paths on the node
+  ansible.builtin.set_fact:
+    rke2_airgap_rpms: >-
+      {{ query('ansible.builtin.fileglob', rke2_airgap_artifacts_dir ~ '/rke2/rpms/*.rpm')
+         | map('basename') | map('regex_replace', '^', rke2_airgap_rpm_dir ~ '/') | sort }}
+
+# dnf does not check signatures of local package files by default
+# (localpkg_gpgcheck=0), and `rpm --checksig` exits 0 for an unsigned package
+# whose digests match. So require "signatures OK" on every line.
+- name: Check the RPM signatures against the Rancher key
+  ansible.builtin.command:
+    argv: "{{ ['rpm', '--checksig'] + rke2_airgap_rpms }}"
+  register: rke2_airgap_checksig
+  changed_when: false
+  failed_when: >-
+    rke2_airgap_checksig.rc != 0 or
+    (rke2_airgap_checksig.stdout_lines | reject('search', 'digests signatures OK$') | list | length) > 0
+
+- name: Install RKE2 from the staged RPMs
+  ansible.builtin.dnf:
+    name: "{{ rke2_airgap_rpms }}"
+    state: present
+    disable_gpg_check: false
+
+# RKE2 imports every tarball in agent/images at start, before pulling.
+# Modes match what RKE2 sets on start (0755 under its 0750 agent and server
+# directories), so the task does not fight it after a restart.
+- name: Create the RKE2 images directory
+  ansible.builtin.file:
+    path: /var/lib/rancher/rke2/agent/images
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Stage the RKE2 and bootstrap images
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: /var/lib/rancher/rke2/agent/images/
+    owner: root
+    group: root
+    mode: "0600"
+  loop: >-
+    {{ (query('ansible.builtin.fileglob', rke2_airgap_artifacts_dir ~ '/rke2/images/*.tar.zst')
+        + [rke2_airgap_artifacts_dir ~ '/bootstrap/local-path-images.tar']) | sort }}
+  loop_control:
+    label: "{{ item | basename }}"
+
+# RKE2 applies every manifest in server/manifests at start and on change.
+# Same content as gitops/local-path-storage on the build cluster.
+- name: Create the RKE2 manifests directory
+  ansible.builtin.file:
+    path: /var/lib/rancher/rke2/server/manifests
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy local-path-provisioner through RKE2
+  ansible.builtin.copy:
+    src: "{{ rke2_airgap_artifacts_dir }}/bootstrap/local-path-storage.yaml"
+    dest: /var/lib/rancher/rke2/server/manifests/local-path-storage.yaml
+    owner: root
+    group: root
+    mode: "0600"

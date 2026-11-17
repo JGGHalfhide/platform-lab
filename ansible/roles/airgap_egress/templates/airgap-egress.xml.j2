@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Managed by Ansible (airgap_egress role) -->
+<policy target="REJECT">
+  <short>airgap-egress</short>
+  <description>Airgap: the node may only open connections to its LAN, pod and service networks.</description>
+  <ingress-zone name="HOST"/>
+  <egress-zone name="ANY"/>
+{% for net in airgap_egress_allowed_ipv4 %}
+  <rule family="ipv4"><destination address="{{ net }}"/><accept/></rule>
+{% endfor %}
+{% for net in airgap_egress_allowed_ipv6 %}
+  <rule family="ipv6"><destination address="{{ net }}"/><accept/></rule>
+{% endfor %}
+</policy>

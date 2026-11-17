@@ -2,6 +2,10 @@
 # RKE2 release from the stable channel, as packaged in rpm.rancher.io.
 rke2_minor: "1.36"
 rke2_version: "1.36.5~rke2r1"
+# SELinux policy package (common repo). Connected nodes get it as a dependency;
+# airgap staging (scripts/airgap-stage.sh) downloads this exact version, the
+# one the build node runs.
+rke2_selinux_version: "0.24-1.el9"
 
 rke2_repo_base: https://rpm.rancher.io/rke2/latest
 rke2_gpg_key_url: https://rpm.rancher.io/public.key
@@ -24,3 +28,13 @@ rke2_config:
 
 # Admin kubeconfig copied to the controller (repo root; gitignored).
 rke2_kubeconfig_dest: "{{ playbook_dir }}/../kubeconfig"
+
+# Airgap mode (airgap_servers): install from artifacts staged on the
+# controller by scripts/airgap-stage.sh instead of rpm.rancher.io; preload
+# the RKE2 and local-path-provisioner images; deploy local-path-provisioner
+# through RKE2's manifests directory (Zarf's registry needs a default
+# StorageClass before `zarf init`).
+rke2_airgap: false
+rke2_airgap_artifacts_dir: ""
+# Where the RPMs are kept on the node (root only).
+rke2_airgap_rpm_dir: /var/lib/rancher/rke2-artifacts/rpms

@@ -1,0 +1,49 @@
+# Platform components for the airgapped cluster: the Kyverno policy engine.
+# Same chart version and values as the build cluster (gitops/apps/kyverno.yaml,
+# gitops/values/kyverno.yaml). Argo CD is not deployed on the target: Zarf is
+# the deploy tool there.
+kind: ZarfPackageConfig
+metadata:
+  name: platform
+  description: Kyverno policy engine (chart 3.9.2, Kyverno v1.19.2)
+  version: 0.6.0
+  architecture: amd64
+
+components:
+  - name: kyverno
+    required: true
+    charts:
+      - name: kyverno
+        version: 3.9.2
+        url: https://kyverno.github.io/kyverno
+        namespace: kyverno
+        releaseName: kyverno
+        valuesFiles:
+          - ../../gitops/values/kyverno.yaml
+    manifests:
+      - name: kyverno-namespace-defaults
+        namespace: kyverno
+        files:
+          - ../../gitops/kyverno/default-sa.yaml
+    # As the chart references them (`zarf dev find-images zarf/platform`).
+    # Listed by tag: the Zarf agent rewrites a pod's tag reference to a tag
+    # derived from the original string, so a digest here would not match.
+    # The package records each image's digest.
+    images:
+      - reg.kyverno.io/kyverno/kyverno:v1.19.2
+      - reg.kyverno.io/kyverno/kyvernopre:v1.19.2
+      - reg.kyverno.io/kyverno/background-controller:v1.19.2
+      - reg.kyverno.io/kyverno/cleanup-controller:v1.19.2
+      - reg.kyverno.io/kyverno/reports-controller:v1.19.2
+      # Helm test pod only (`helm test`); not run by Zarf or Argo CD.
+      - ghcr.io/kyverno/readiness-checker:v1.19.2
+    actions:
+      onDeploy:
+        after:
+          - description: Kyverno admission controller ready
+            wait:
+              cluster:
+                kind: Deployment
+                name: kyverno-admission-controller
+                namespace: kyverno
+                condition: Available

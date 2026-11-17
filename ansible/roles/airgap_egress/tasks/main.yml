@@ -1,0 +1,53 @@
+---
+- name: Install the egress policies
+  ansible.builtin.template:
+    src: "{{ item }}.xml.j2"
+    dest: /etc/firewalld/policies/{{ item }}.xml
+    owner: root
+    group: root
+    mode: "0640"
+  loop: [airgap-egress, airgap-pod-egress]
+  when: airgap_egress_state == 'blocked'
+  notify: Reload firewalld
+
+- name: Remove the egress policies
+  ansible.builtin.file:
+    path: /etc/firewalld/policies/{{ item }}.xml
+    state: absent
+  loop: [airgap-egress, airgap-pod-egress]
+  when: airgap_egress_state == 'open'
+  notify: Reload firewalld
+
+- name: Apply the firewall change
+  ansible.builtin.meta: flush_handlers
+
+- name: List the active policies
+  ansible.builtin.command: firewall-cmd --get-policies
+  register: airgap_egress_policies
+  changed_when: false
+  failed_when: >-
+    ('airgap-egress' in airgap_egress_policies.stdout.split()) !=
+    (airgap_egress_state == 'blocked')
+
+# Proof for the runbook: a connected node gets an HTTP status, a blocked one
+# fails to connect. Recorded either way. curl on purpose: the runbook's proof
+# is the same command an operator would type.
+- name: Try to reach the internet from the node
+  ansible.builtin.command:  # noqa: command-instead-of-module
+    cmd: curl -sS -o /dev/null -w '%{http_code}' --max-time 10 https://rpm.rancher.io/
+  register: airgap_egress_curl
+  changed_when: false
+  failed_when: false
+
+- name: Show the result
+  ansible.builtin.debug:
+    msg: >-
+      egress {{ airgap_egress_state }}:
+      curl rc={{ airgap_egress_curl.rc }}
+      {{ airgap_egress_curl.stdout }}{{ airgap_egress_curl.stderr }}
+
+- name: Fail if the block does not hold
+  ansible.builtin.assert:
+    that: airgap_egress_curl.rc != 0
+    fail_msg: the node still reaches the internet with egress blocked
+  when: airgap_egress_state == 'blocked'

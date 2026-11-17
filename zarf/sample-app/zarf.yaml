@@ -1,0 +1,49 @@
+# Sample application for the airgapped cluster: the same manifests as the
+# build cluster (gitops/sample-app). Images are pulled from the build
+# cluster's registry (signed and scanned by `make image`) together with their
+# cosign signatures and SBOM attestations, so Kyverno can verify them after
+# the Zarf agent rewrites them to its registry. The sample-db Secret must
+# exist first (sample_app_secret role).
+kind: ZarfPackageConfig
+metadata:
+  name: sample-app
+  description: Sample web app (podinfo) and database (PostgreSQL)
+  version: 0.6.0
+  architecture: amd64
+
+components:
+  - name: sample-app
+    required: true
+    manifests:
+      - name: sample-app
+        namespace: sample-app
+        kustomizations:
+          - ../../gitops/sample-app
+    # Pinned by the index digest that `make image` signed. The cosign
+    # signature (.sig) and SBOM attestation (.att) use cosign's tag-based
+    # layout and are not picked up by `zarf package create` on their own, so
+    # they are listed explicitly; Kyverno verifies the .sig after the move.
+    images:
+      - registry.platform-lab.internal/stefanprodan/podinfo:6.17.0@sha256:fa2f27c1a8561097e5144bfc0853eba6054d743b68b03de4cad4675616ddefb0
+      - registry.platform-lab.internal/stefanprodan/podinfo:sha256-fa2f27c1a8561097e5144bfc0853eba6054d743b68b03de4cad4675616ddefb0.sig
+      - registry.platform-lab.internal/stefanprodan/podinfo:sha256-fa2f27c1a8561097e5144bfc0853eba6054d743b68b03de4cad4675616ddefb0.att
+      - registry.platform-lab.internal/library/postgres:17.12-alpine3.24@sha256:a77aa70e641402a21411b92b721c58d10f23b50ae5fdd2333efd22d166e1e5f7
+      - registry.platform-lab.internal/library/postgres:sha256-a77aa70e641402a21411b92b721c58d10f23b50ae5fdd2333efd22d166e1e5f7.sig
+      - registry.platform-lab.internal/library/postgres:sha256-a77aa70e641402a21411b92b721c58d10f23b50ae5fdd2333efd22d166e1e5f7.att
+    actions:
+      onDeploy:
+        after:
+          - description: web ready
+            wait:
+              cluster:
+                kind: Deployment
+                name: web
+                namespace: sample-app
+                condition: Available
+          - description: db ready
+            wait:
+              cluster:
+                kind: Pod
+                name: db-0
+                namespace: sample-app
+                condition: Ready

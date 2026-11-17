@@ -14,28 +14,32 @@
     create_home: false
     comment: etcd user
 
-- name: Import the RKE2 RPM signing key
-  ansible.builtin.rpm_key:
-    key: "{{ rke2_gpg_key_url }}"
-    fingerprint: "{{ rke2_gpg_key_fingerprint }}"
+# Connected: the Rancher repositories. Airgap: the staged RPMs (tasks/airgap.yml).
+- name: Configure the RKE2 repositories
+  when: not rke2_airgap
+  block:
+    - name: Import the RKE2 RPM signing key
+      ansible.builtin.rpm_key:
+        key: "{{ rke2_gpg_key_url }}"
+        fingerprint: "{{ rke2_gpg_key_fingerprint }}"
 
-- name: Add the RKE2 common repository (rke2-selinux)
-  ansible.builtin.yum_repository:
-    name: rancher-rke2-common-latest
-    description: Rancher RKE2 Common Latest
-    baseurl: "{{ rke2_repo_base }}/common/centos/{{ ansible_facts['distribution_major_version'] }}/noarch"
-    gpgcheck: true
-    repo_gpgcheck: true
-    gpgkey: "{{ rke2_gpg_key_url }}"
+    - name: Add the RKE2 common repository (rke2-selinux)
+      ansible.builtin.yum_repository:
+        name: rancher-rke2-common-latest
+        description: Rancher RKE2 Common Latest
+        baseurl: "{{ rke2_repo_base }}/common/centos/{{ ansible_facts['distribution_major_version'] }}/noarch"
+        gpgcheck: true
+        repo_gpgcheck: true
+        gpgkey: "{{ rke2_gpg_key_url }}"
 
-- name: Add the versioned RKE2 repository
-  ansible.builtin.yum_repository:
-    name: rancher-rke2-{{ rke2_minor | replace('.', '-') }}-latest
-    description: Rancher RKE2 {{ rke2_minor }} Latest
-    baseurl: "{{ rke2_repo_base }}/{{ rke2_minor }}/centos/{{ ansible_facts['distribution_major_version'] }}/x86_64"
-    gpgcheck: true
-    repo_gpgcheck: true
-    gpgkey: "{{ rke2_gpg_key_url }}"
+    - name: Add the versioned RKE2 repository
+      ansible.builtin.yum_repository:
+        name: rancher-rke2-{{ rke2_minor | replace('.', '-') }}-latest
+        description: Rancher RKE2 {{ rke2_minor }} Latest
+        baseurl: "{{ rke2_repo_base }}/{{ rke2_minor }}/centos/{{ ansible_facts['distribution_major_version'] }}/x86_64"
+        gpgcheck: true
+        repo_gpgcheck: true
+        gpgkey: "{{ rke2_gpg_key_url }}"
 
 # Without a lock, the base role's package update moves RKE2 to the newest
 # release in the minor-version repo. Locking before install also lets a change
@@ -63,6 +67,11 @@
   ansible.builtin.dnf:
     name: "rke2-server-{{ rke2_version }}"
     state: present
+  when: not rke2_airgap
+
+- name: Install RKE2 from the staged artifacts
+  ansible.builtin.import_tasks: airgap.yml
+  when: rke2_airgap
 
 # Applied via handler only when the file changes; restarting systemd-sysctl on a
 # running cluster can undo CNI settings.

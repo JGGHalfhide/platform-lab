@@ -1,0 +1,10 @@
+---
+# Block or reopen internet egress on the airgapped node.
+#   ansible-playbook airgap-egress.yml                          (block)
+#   ansible-playbook airgap-egress.yml -e airgap_egress_state=open
+# (make airgap-disconnect / make airgap-reconnect)
+- name: Airgap egress
+  hosts: airgap_servers
+  become: true
+  roles:
+    - airgap_egress

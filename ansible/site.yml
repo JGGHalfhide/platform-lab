@@ -11,6 +11,9 @@
         delay: 5
         timeout: 600
 
+# Both clusters: the build node (connected) and the airgapped node (iMac or
+# its rehearsal VM). On airgap_servers the rke2 role installs from the
+# artifacts staged by `make airgap-stage` (group_vars/airgap_servers).
 - name: Base OS configuration, STIG hardening and RKE2
   hosts: rke2_servers
   become: true
@@ -19,5 +22,13 @@
     - hardening
     - openscap
     - rke2
+    - sample_app_secret
+
+# Build cluster only: Secrets for the in-cluster registry and Argo CD, which
+# the airgapped cluster does not run (Zarf brings its own registry).
+- name: Build cluster Secrets
+  hosts: build_servers
+  become: true
+  roles:
     - registry_auth
     - argocd_redis_auth

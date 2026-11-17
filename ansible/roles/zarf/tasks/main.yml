@@ -1,0 +1,190 @@
+---
+- name: Create the Zarf directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  loop:
+    - "{{ zarf_dir }}"
+    - "{{ zarf_dir }}/packages"
+
+- name: Install the Zarf CLI
+  ansible.builtin.copy:
+    src: "{{ zarf_artifacts_dir }}/zarf/zarf_{{ zarf_version }}_Linux_amd64"
+    dest: "{{ zarf_dir }}/zarf"
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Link the Zarf CLI into the PATH
+  ansible.builtin.file:
+    src: "{{ zarf_dir }}/zarf"
+    dest: /usr/local/bin/zarf
+    state: link
+
+# `zarf init` looks for the init package in the working directory.
+- name: Copy the Zarf init package
+  ansible.builtin.copy:
+    src: "{{ zarf_artifacts_dir }}/zarf/zarf-init-amd64-{{ zarf_version }}.tar.zst"
+    dest: "{{ zarf_dir }}/"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Copy the lab cosign public key
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../pki/cosign.pub"
+    dest: "{{ zarf_dir }}/cosign.pub"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Copy the signed packages
+  ansible.builtin.copy:
+    src: "{{ zarf_artifacts_dir }}/packages/zarf-package-{{ item.name }}-amd64-{{ item.version }}.tar.zst"
+    dest: "{{ zarf_dir }}/packages/"
+    owner: root
+    group: root
+    mode: "0600"
+  loop: "{{ zarf_packages }}"
+  loop_control:
+    label: "{{ item.name }} {{ item.version }}"
+
+# Zarf records a package even when a component failed (`zarf package list`
+# shows it at its version either way), so read the per-component status from
+# its record (Secret zarf-package-<name>) and count a package as deployed only
+# when every component Succeeded. Packages are compared by aggregate checksum,
+# so a rebuilt package is redeployed without a version bump; init by version.
+- name: Read the deployed package records
+  ansible.builtin.command:
+    cmd: >-
+      {{ zarf_kubectl }} -n zarf get secret zarf-package-{{ item }}
+      -o jsonpath={.data.data}
+  loop: "{{ ['init'] + (zarf_packages | map(attribute='name') | list) }}"
+  register: zarf_records
+  changed_when: false
+  failed_when: false
+
+- name: Record the fully deployed packages and versions
+  ansible.builtin.set_fact:
+    zarf_deployed_json: >-
+      {%- set out = {} -%}
+      {%- for r in zarf_records.results if r.rc == 0 and r.stdout -%}
+      {%-   set d = r.stdout | b64decode | from_json -%}
+      {%-   set ok = (d.deployedComponents | map(attribute='status') | unique | list) == ['Succeeded'] -%}
+      {%-   set id = d.data.metadata.version if r.item == 'init' else d.data.metadata.aggregateChecksum -%}
+      {%-   set _ = out.update({r.item: id if ok else 'incomplete'}) -%}
+      {%- endfor -%}
+      {{ out | to_json }}
+
+- name: Parse the deployed package records
+  ansible.builtin.set_fact:
+    zarf_deployed: "{{ zarf_deployed_json | from_json }}"
+
+- name: Show the deployed packages
+  ansible.builtin.debug:
+    var: zarf_deployed
+
+- name: Read the checksums of the copied packages
+  ansible.builtin.command:
+    cmd: >-
+      {{ zarf_dir }}/zarf package inspect definition
+      {{ zarf_dir }}/packages/zarf-package-{{ item.name }}-amd64-{{ item.version }}.tar.zst
+      --key {{ zarf_dir }}/cosign.pub --no-color
+  loop: "{{ zarf_packages }}"
+  loop_control:
+    label: "{{ item.name }} {{ item.version }}"
+  register: zarf_definitions
+  changed_when: false
+
+- name: Record the package checksums
+  ansible.builtin.set_fact:
+    zarf_checksums: >-
+      {{ dict(zarf_definitions.results | map(attribute='item.name')
+              | zip(zarf_definitions.results | map(attribute='stdout') | map('from_yaml')
+                    | map(attribute='metadata') | map(attribute='aggregateChecksum'))) }}
+
+- name: Initialize Zarf (registry and agent)
+  ansible.builtin.command:
+    cmd: >-
+      {{ zarf_dir }}/zarf init --confirm --no-color
+      {% for k, v in zarf_init_variables.items() %}--set-variables {{ k }}={{ v }} {% endfor %}
+    chdir: "{{ zarf_dir }}"
+  environment:
+    KUBECONFIG: "{{ zarf_kubeconfig }}"
+  when: zarf_deployed.get('init') != zarf_version
+  changed_when: true
+
+# Kyverno verifies signatures of images in the Zarf registry
+# (zarf/policies/kustomization.yaml) through the registry's Service, which
+# needs the Zarf pull login for that address. Created before the policies.
+- name: Read the Zarf registry pull login
+  ansible.builtin.command:
+    cmd: "{{ zarf_kubectl }} -n zarf get secret zarf-state -o jsonpath={.data.state}"
+  register: zarf_state
+  changed_when: false
+  no_log: true
+
+- name: Render the Kyverno pull Secret for the Zarf registry
+  ansible.builtin.set_fact:
+    zarf_pull_secret:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: zarf-registry-pull
+        namespace: kyverno
+        labels:
+          app.kubernetes.io/part-of: zarf
+      type: kubernetes.io/dockerconfigjson
+      stringData:
+        .dockerconfigjson: >-
+          {{ {'auths': {zarf_registry_service: {'auth': (zarf_registry.pullUsername ~ ':'
+             ~ zarf_registry.pullPassword) | b64encode}}} | to_json }}
+  vars:
+    zarf_registry: "{{ (zarf_state.stdout | b64decode | from_json).registryInfo }}"
+  no_log: true
+
+- name: Create the kyverno namespace
+  ansible.builtin.command:
+    cmd: "{{ zarf_kubectl }} create namespace kyverno"
+  register: zarf_kyverno_ns
+  changed_when: zarf_kyverno_ns.rc == 0
+  failed_when: zarf_kyverno_ns.rc != 0 and 'AlreadyExists' not in zarf_kyverno_ns.stderr
+
+- name: Compare the pull Secret with the cluster
+  ansible.builtin.command:
+    cmd: "{{ zarf_kubectl }} diff --server-side -f -"
+    stdin: "{{ zarf_pull_secret | to_json }}"
+  register: zarf_pull_diff
+  changed_when: false
+  failed_when: zarf_pull_diff.rc > 1
+  no_log: true
+
+- name: Apply the pull Secret
+  ansible.builtin.command:
+    cmd: "{{ zarf_kubectl }} apply --server-side -f -"
+    stdin: "{{ zarf_pull_secret | to_json }}"
+  when: zarf_pull_diff.rc == 1
+  changed_when: true
+  no_log: true
+
+# --take-ownership: Zarf installs manifests as Helm releases, and Helm will
+# not adopt objects it did not create. The packages declare each namespace's
+# `default` ServiceAccount (automountServiceAccountToken: false, CIS 5.1.5),
+# which Kubernetes creates first, and the sample-app namespace already exists
+# for the sample-db Secret (sample_app_secret role).
+- name: Deploy the packages
+  ansible.builtin.command:
+    cmd: >-
+      {{ zarf_dir }}/zarf package deploy
+      {{ zarf_dir }}/packages/zarf-package-{{ item.name }}-amd64-{{ item.version }}.tar.zst
+      --key {{ zarf_dir }}/cosign.pub --verify=always --take-ownership --confirm --no-color
+  environment:
+    KUBECONFIG: "{{ zarf_kubeconfig }}"
+  loop: "{{ zarf_packages }}"
+  loop_control:
+    label: "{{ item.name }} {{ item.version }}"
+  when: zarf_deployed.get(item.name) != zarf_checksums[item.name]
+  changed_when: true

@@ -1,0 +1,9 @@
+---
+# Zarf on the airgapped node: copy the CLI and signed packages, `zarf init`,
+# deploy platform, policies and sample app (docs/airgap-runbook.md, step 5).
+# Run with egress blocked (make airgap-disconnect).
+- name: Zarf deploy
+  hosts: airgap_servers
+  become: true
+  roles:
+    - zarf

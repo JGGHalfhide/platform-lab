@@ -1,0 +1,36 @@
+# Airgapped cluster only (zarf/policies). Zarf rewrites every image to its
+# registry, including the upstream platform images of Kyverno and Zarf itself
+# (by tag, e.g. 127.0.0.1:31999/kyverno/kyverno:v1.19.2-zarf-<crc>). Those are
+# not signed with the lab key; on the build cluster the same images come from
+# their upstream registries under platform-bootstrap-images. Their integrity
+# here comes from the Zarf package, which is signed with the lab key and
+# records each image digest. Without this, a restart of the Zarf registry or
+# a Kyverno controller would be rejected at admission.
+apiVersion: policies.kyverno.io/v1
+kind: PolicyException
+metadata:
+  name: zarf-platform-images
+  namespace: kyverno
+spec:
+  policyRefs:
+    - name: verify-platform-images
+      kind: ImageValidatingPolicy
+  matchConditions:
+    - name: platform-namespaces
+      expression: >-
+        object.metadata.namespace in ['zarf', 'kyverno']
+---
+# The Zarf registry and agent charts set no app.kubernetes.io/name label
+# (Zarf's own components, not configurable through `zarf init`).
+apiVersion: policies.kyverno.io/v1
+kind: PolicyException
+metadata:
+  name: zarf-components-labels
+  namespace: kyverno
+spec:
+  policyRefs:
+    - name: require-labels
+      kind: ValidatingPolicy
+  matchConditions:
+    - name: zarf-namespace
+      expression: object.metadata.namespace == 'zarf'

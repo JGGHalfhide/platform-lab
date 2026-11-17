@@ -1,0 +1,18 @@
+# Admission test for the airgapped cluster (docs/airgap-runbook.md, step 6):
+# puts an UNSIGNED image into the Zarf registry, so that a pod using it can
+# only be rejected for the missing signature, not for a missing image. The
+# package itself is signed like the others (deploy uses --verify=always).
+# Image: library/busybox:1.36.1 in the build registry, published with SIGN=0
+# (Week 4 admission test). No manifests: the test pod is applied by hand.
+kind: ZarfPackageConfig
+metadata:
+  name: admission-test-unsigned
+  description: Unsigned image for the airgap admission test
+  version: 0.6.0
+  architecture: amd64
+
+components:
+  - name: unsigned-image
+    required: true
+    images:
+      - registry.platform-lab.internal/library/busybox:1.36.1@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662

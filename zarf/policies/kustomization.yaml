@@ -1,0 +1,40 @@
+# The build cluster's policy set (gitops/policies), with verify-platform-images
+# pointed at the Zarf registry. On the airgapped cluster:
+# - Pods carry 127.0.0.1:31999/... (rewritten by the Zarf agent), while
+#   Deployments and other controllers keep 127.0.0.1:30500/... from Git. Zarf
+#   pushed the same repository paths, signatures included, so both prefixes
+#   are looked up in the Zarf registry through its Service.
+# - The Zarf registry requires a login for pulls: Kyverno uses the
+#   zarf-registry-pull Secret (kyverno namespace), created by the zarf Ansible
+#   role from the zarf-state Secret. Plain HTTP inside the cluster, as on the
+#   build cluster: images are pinned by digest and the signature is checked
+#   against the key.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../gitops/policies
+  - exception-zarf-platform.yaml
+patches:
+  - target:
+      group: policies.kyverno.io
+      kind: ImageValidatingPolicy
+      name: verify-platform-images
+    patch: |-
+      - op: replace
+        path: /spec/images/0/expression
+        value: >-
+          (object.spec.containers
+          + (has(object.spec.initContainers) ? object.spec.initContainers : [])
+          + (has(object.spec.ephemeralContainers) ? object.spec.ephemeralContainers : []))
+          .map(c, c.image)
+          .filter(i, i.startsWith('127.0.0.1:30500/') || i.startsWith('127.0.0.1:31999/'))
+          .map(i, 'zarf-docker-registry.zarf.svc.cluster.local:5000/' + i.substring(16))
+      - op: replace
+        path: /spec/matchImageReferences/0/glob
+        value: "zarf-docker-registry.zarf.svc.cluster.local:5000/*"
+      - op: replace
+        path: /spec/credentials
+        value:
+          allowInsecureRegistry: true
+          secrets:
+            - zarf-registry-pull

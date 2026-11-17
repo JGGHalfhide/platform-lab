@@ -1,0 +1,14 @@
+---
+# The airgapped node (the iMac, or the rehearsal VM standing in for it).
+# RKE2 comes only from artifacts staged on the build host by
+# `make airgap-stage` (scripts/airgap-stage.sh), never from rpm.rancher.io.
+# OS packages still come from the Rocky mirrors until egress is blocked
+# (docs/airgap-runbook.md).
+rke2_airgap: true
+rke2_airgap_artifacts_dir: "{{ playbook_dir }}/../build/airgap"
+
+# Kept apart from the build cluster's ./kubeconfig.
+rke2_kubeconfig_dest: "{{ playbook_dir }}/../kubeconfig-airgap"
+
+# Zarf CLI and init package; must match ZARF_VERSION in scripts/airgap-stage.sh.
+zarf_version: v0.89.0

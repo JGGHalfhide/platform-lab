@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Managed by Ansible (airgap_egress role) -->
+<policy target="REJECT">
+  <short>airgap-pod-egress</short>
+  <description>Airgap: pods may not open connections through the external interface.</description>
+  <ingress-zone name="{{ airgap_egress_pod_zone }}"/>
+  <egress-zone name="{{ airgap_egress_external_zone }}"/>
+</policy>

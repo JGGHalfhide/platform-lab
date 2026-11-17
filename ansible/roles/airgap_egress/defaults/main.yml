@@ -1,0 +1,25 @@
+---
+# Egress block for the airgapped node (docs/airgap-runbook.md, step 4).
+# blocked: two firewalld policies reject all new outbound traffic except to
+# the allowed networks; replies to inbound sessions (SSH, Ansible, kubectl)
+# still flow. open: the policies are removed.
+airgap_egress_state: blocked
+
+# Destinations the node itself may still reach: its own LAN (the build host
+# for Ansible/scp and DNS), the pod and service CIDRs (kubelet probes,
+# API server to webhooks; must match the base role's trusted sources),
+# loopback and DHCP broadcast (lease renewal).
+airgap_egress_allowed_ipv4:
+  - "{{ ansible_facts['default_ipv4']['network'] }}/{{ ansible_facts['default_ipv4']['prefix'] }}"
+  - 10.42.0.0/16
+  - 10.43.0.0/16
+  - 127.0.0.0/8
+  - 255.255.255.255/32
+airgap_egress_allowed_ipv6:
+  - ::1/128
+  - fe80::/10
+
+# Zones from the base role: pods and services are trusted (by source), the
+# external interface is in the default zone.
+airgap_egress_pod_zone: trusted
+airgap_egress_external_zone: public

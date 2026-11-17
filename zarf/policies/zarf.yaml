@@ -1,0 +1,18 @@
+# Kyverno policies for the airgapped cluster: the same set the build cluster
+# runs (gitops/policies, Enforce), plus verification for images served by the
+# Zarf registry. Deploy after the platform package (the policy CRDs come with
+# Kyverno).
+kind: ZarfPackageConfig
+metadata:
+  name: policies
+  description: Kyverno policies (PSS restricted, CIS/STIG mappings, image signatures)
+  version: 0.6.0
+  architecture: amd64
+
+components:
+  - name: policies
+    required: true
+    manifests:
+      - name: platform-policies
+        kustomizations:
+          - .

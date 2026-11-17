@@ -1,0 +1,29 @@
+# Restricted, labelled, with resources: only the signature check can fail.
+# The reference is as written in Git on the build cluster; the Zarf agent
+# rewrites it to 127.0.0.1:31999.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: unsigned-test
+  namespace: sample-app
+  labels:
+    app.kubernetes.io/name: unsigned-test
+spec:
+  automountServiceAccountToken: false
+  restartPolicy: Never
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: test
+      image: 127.0.0.1:30500/library/busybox:1.36.1@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
+      command: ["true"]
+      resources:
+        requests: {cpu: 10m, memory: 16Mi}
+        limits: {memory: 32Mi}
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]

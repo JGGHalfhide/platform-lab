@@ -1,0 +1,27 @@
+---
+# Zarf on the airgapped node: CLI, init package and the signed packages from
+# build/airgap (scripts/airgap-stage.sh, scripts/airgap-packages.sh).
+zarf_version: v0.89.0
+zarf_artifacts_dir: "{{ rke2_airgap_artifacts_dir }}"
+zarf_dir: /opt/zarf
+zarf_kubeconfig: /etc/rancher/rke2/rke2.yaml
+# The Zarf registry's in-cluster address (used by Kyverno).
+zarf_registry_service: zarf-docker-registry.zarf.svc.cluster.local:5000
+zarf_kubectl: /var/lib/rancher/rke2/bin/kubectl --kubeconfig {{ zarf_kubeconfig }}
+
+# Deployed in this order; each is verified against the lab cosign key.
+zarf_packages:
+  - name: platform
+    version: 0.6.0
+  - name: policies
+    version: 0.6.0
+  - name: sample-app
+    version: 0.6.0
+
+# `zarf init` variables. Single node with 8 GB: one registry replica, no
+# autoscaling, a smaller volume than the 20Gi default.
+zarf_init_variables:
+  REGISTRY_PVC_SIZE: 10Gi
+  REGISTRY_HPA_ENABLE: "false"
+  REGISTRY_MEM_REQ: 128Mi
+  REGISTRY_MEM_LIMIT: 512Mi
