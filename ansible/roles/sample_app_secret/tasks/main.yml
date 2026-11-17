@@ -1,0 +1,48 @@
+---
+# Same pattern as registry_auth: kubectl diff exits 0 when the live object
+# matches, 1 when it differs or is missing; apply only then, so a second run
+# reports no changes. Server-side apply keeps the data out of annotations.
+- name: Check for the sample app namespace
+  ansible.builtin.command:
+    cmd: "{{ sample_app_secret_kubectl }} get namespace {{ sample_app_secret_namespace }}"
+  register: sample_app_secret_ns
+  changed_when: false
+  failed_when: false
+
+- name: Create the sample app namespace
+  ansible.builtin.command:
+    cmd: "{{ sample_app_secret_kubectl }} create namespace {{ sample_app_secret_namespace }}"
+  when: sample_app_secret_ns.rc != 0
+  changed_when: true
+
+- name: Render the sample-db Secret
+  ansible.builtin.set_fact:
+    sample_app_secret_manifest:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: "{{ sample_app_secret_name }}"
+        namespace: "{{ sample_app_secret_namespace }}"
+        labels:
+          app.kubernetes.io/part-of: sample-app
+      type: Opaque
+      stringData:
+        password: "{{ sample_app_secret_password }}"
+  no_log: true
+
+- name: Compare with the cluster
+  ansible.builtin.command:
+    cmd: "{{ sample_app_secret_kubectl }} diff --server-side -f -"
+    stdin: "{{ sample_app_secret_manifest | to_json }}"
+  register: sample_app_secret_diff
+  changed_when: false
+  failed_when: sample_app_secret_diff.rc > 1
+  no_log: true
+
+- name: Apply the sample-db Secret
+  ansible.builtin.command:
+    cmd: "{{ sample_app_secret_kubectl }} apply --server-side -f -"
+    stdin: "{{ sample_app_secret_manifest | to_json }}"
+  when: sample_app_secret_diff.rc == 1
+  changed_when: true
+  no_log: true

@@ -9,7 +9,7 @@
 # 2. Syft: SPDX and CycloneDX SBOMs for SCAN_PLATFORM.
 # 3. Trivy: full report for SCAN_PLATFORM, then the gate: fail on any
 #    vulnerability at GATE_SEVERITY that has a fix. Documented exceptions go
-#    in .trivyignore at the repo root. GATE_SEVERITY=none skips the gate.
+#    in .trivyignore.yaml at the repo root. GATE_SEVERITY=none skips the gate.
 # 4. Push to $REGISTRY/<repo>:<tag> and check the digest is unchanged.
 # 5. cosign: sign the index digest and attach the SPDX SBOM as an attestation
 #    (type spdxjson), with the key from scripts/cosign-keygen.sh, then verify
@@ -73,11 +73,20 @@ print(f"    {len(d['packages'])} packages ({d['spdxVersion']})")
 EOF
 
 echo "==> Vulnerability scan (trivy, $SCAN_PLATFORM)"
-ignorefile="$REPO_ROOT/.trivyignore"
+# Exceptions: .trivyignore.yaml (path-scoped, with a statement per entry).
+# Suppressed findings stay in the reports (--show-suppressed) but are not
+# counted by the gate, which reads only the unsuppressed Vulnerabilities.
+ignorefile="$REPO_ROOT/.trivyignore.yaml"
 trivy_args=(image --input "$oci" --platform "$SCAN_PLATFORM" -q)
-[[ -f "$ignorefile" ]] && trivy_args+=(--ignorefile "$ignorefile")
+if [[ -f "$ignorefile" ]]; then
+  trivy_args+=(--ignorefile "$ignorefile" --show-suppressed)
+else
+  trivy_args+=(--ignorefile "")
+fi
 trivy "${trivy_args[@]}" --format json -o "$out/trivy.json"
-trivy convert --format table -o "$out/trivy.txt" "$out/trivy.json"
+convert_args=(--format table -o "$out/trivy.txt")
+[[ -f "$ignorefile" ]] && convert_args+=(--show-suppressed)
+trivy convert "${convert_args[@]}" "$out/trivy.json"
 python - "$out/trivy.json" <<'EOF' | tee "$out/trivy-summary.txt"
 import json, sys
 from collections import Counter
@@ -90,6 +99,9 @@ for r in d.get("Results", []):
             fixable[v["Severity"]] += 1
 order = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"]
 print("    " + ", ".join(f"{s} {all_[s]} ({fixable[s]} fixable)" for s in order))
+suppressed = sum(len(r.get("ExperimentalModifiedFindings") or []) for r in d.get("Results", []))
+if suppressed:
+    print(f"    {suppressed} suppressed by .trivyignore.yaml (listed in trivy.txt)")
 EOF
 
 if [[ "$GATE_SEVERITY" != none ]]; then
@@ -109,7 +121,7 @@ sys.exit(1 if hits else 0)
 EOF
     cat "$out/trivy-gate.txt"
     echo "Gate failed for $pinned: see $out/trivy-gate.txt." >&2
-    echo "Rebuild/upgrade the image, or document an exception in .trivyignore." >&2
+    echo "Rebuild/upgrade the image, or document an exception in .trivyignore.yaml." >&2
     exit 1
   fi
   echo "    passed"

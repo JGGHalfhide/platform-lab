@@ -1,0 +1,21 @@
+# Sample application (gitops/sample-app): podinfo web app and PostgreSQL.
+# Images must be in the platform registry first (`make image`; empty after a
+# rebuild), and the sample-db Secret comes from the sample_app_secret role.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sample-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/JGGHalfhide/platform-lab.git
+    targetRevision: main
+    path: gitops/sample-app
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sample-app
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

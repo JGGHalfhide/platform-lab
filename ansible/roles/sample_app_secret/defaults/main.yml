@@ -1,0 +1,11 @@
+---
+# The sample app's database Secret (key `password`), created from Vault on
+# both clusters before Argo CD (build) or Zarf (airgap) deploys the app.
+# PostgreSQL reads it as a file (POSTGRES_PASSWORD_FILE), not from an env var
+# (STIG V-242415, policy disallow-secret-env).
+sample_app_secret_namespace: sample-app
+sample_app_secret_name: sample-db
+sample_app_secret_password: "{{ vault_sample_db_password }}"
+
+sample_app_secret_kubectl: >-
+  /var/lib/rancher/rke2/bin/kubectl --kubeconfig /etc/rancher/rke2/rke2.yaml

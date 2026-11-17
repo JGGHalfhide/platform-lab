@@ -1,0 +1,17 @@
+# Sample application: a small web app (podinfo) and a database (PostgreSQL).
+# Deployed by Argo CD on the build cluster (gitops/apps/sample-app.yaml) and
+# by Zarf on the airgapped cluster (zarf/sample-app). Images come from the
+# platform registry, pinned by digest and signed by `make image`; on the
+# airgapped cluster the Zarf agent rewrites 127.0.0.1:30500 to its registry.
+# The database password Secret (sample-db) is created from Vault by the
+# sample_app_secret Ansible role, not from Git.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: sample-app
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: sample-app
+resources:
+  - namespace.yaml
+  - web.yaml
+  - db.yaml

@@ -32,6 +32,23 @@ Images published so far:
 | `library/busybox:1.36.1` | - | - | no (unsigned test image, `SIGN=0`) |
 | `library/alpine:3.21` | - | - | no (format test image, signatures removed) |
 | `nginx:1.25.0` | - | 7 fixable CRITICAL | blocked by the gate, not pushed |
+| `stefanprodan/podinfo:6.17.0` (sample app, Week 6) | 123 | 0 / 3 | yes |
+| `library/postgres:17.12-alpine3.24` (sample app, Week 6) | 51 | 0 / 0 after the `gosu` exception (26 suppressed) | yes |
+
+### Scan exceptions
+
+Exceptions live in `.trivyignore.yaml` at the repo root, one entry per CVE,
+each scoped to the file it applies to (`paths`) with a statement. Trivy runs
+with `--show-suppressed`: suppressed findings still appear in each image's
+`trivy.txt` / `trivy.json` (`ExperimentalModifiedFindings`) and in the
+summary line, but the gate does not count them.
+
+| Image | File | Findings | Why it is not exploitable here |
+|---|---|---|---|
+| `library/postgres:17.12-alpine3.24` | `usr/local/bin/gosu` | 1 CRITICAL, 25 HIGH, all Go stdlib 1.24.6 | The image entrypoint runs gosu only when the container starts as root, to drop to the postgres user. The sample app runs as UID 70 from the start, and root is rejected by the restricted Pod Security level and Kyverno, so gosu is never executed. |
+
+On the airgapped cluster, signed images keep their signatures through Zarf;
+see `docs/airgap-runbook.md`.
 
 ## Admission policy
 

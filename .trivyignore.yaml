@@ -1,0 +1,162 @@
+# Trivy exceptions for `make image` (scripts/publish-image.sh). Each entry is
+# scoped to the file it applies to and says why it is not exploitable here.
+# Suppressed findings still appear in each image's trivy.txt / trivy.json
+# (--show-suppressed); they only stop counting toward the gate.
+# Review when the image is updated; remove entries the new image fixes.
+vulnerabilities:
+  - id: CVE-2025-68121
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      CRITICAL, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2025-61726
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2025-61729
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2026-111943
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2026-25679
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2026-27145
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2026-32280
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2026-32281
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2026-32283
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2026-33811
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2026-33814
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2026-33818
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2026-39820
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2026-39821
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2026-39822
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2026-39836
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2026-42499
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2026-42504
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2026-56853
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2026-56858
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2026-56859
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2026-56860
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2026-56862
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2026-78667
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2026-78669
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2026-97031
+    paths: ["usr/local/bin/gosu"]
+    statement: >-
+      HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
+      runs when the container starts as root; the pod runs as UID 70 and root
+      is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
