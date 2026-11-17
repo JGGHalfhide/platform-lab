@@ -5,6 +5,10 @@
 # app.kubernetes.io/name label on every pod; host access and root are covered
 # by the velero-node-agent PolicyException, which matches these pods by
 # Velero's own velero.io/pod-volume-backup / -restore label.
+# privilegedFsBackup: SELinux labels each pod's volume with that pod's own
+# MCS categories, so a hosting pod (container_t, other categories) cannot
+# read it. Privileged hosting pods run as spc_t (Velero's documented setting
+# for SELinux hosts); PolicyException velero-hosting-pods-privileged.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -19,6 +23,7 @@ data:
         "memoryRequest": "128Mi",
         "memoryLimit": "1Gi"
       },
+      "privilegedFsBackup": true,
       "podLabels": {
         "app.kubernetes.io/name": "velero-data-mover",
         "app.kubernetes.io/part-of": "velero"

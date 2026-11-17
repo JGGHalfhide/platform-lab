@@ -32,3 +32,25 @@ spec:
             'velero.io/pod-volume-backup' in object.metadata.?labels.orValue({}) ||
             'velero.io/pod-volume-restore' in object.metadata.?labels.orValue({}))) ||
           (object.kind == 'DaemonSet' && object.metadata.name == 'node-agent'))
+---
+# Velero's per-volume hosting pods run privileged (privilegedFsBackup,
+# gitops/velero/node-agent-config.yaml): with SELinux enforcing, each pod's
+# volume carries that pod's own MCS categories, and only spc_t (privileged)
+# can read and write it from another pod. Scoped to the short-lived hosting
+# pods only (Velero's pod-volume-backup/-restore label, velero namespace);
+# the node agent and the server are not privileged.
+apiVersion: policies.kyverno.io/v1
+kind: PolicyException
+metadata:
+  name: velero-hosting-pods-privileged
+  namespace: kyverno
+spec:
+  policyRefs:
+    - name: disallow-privileged-containers
+      kind: ValidatingPolicy
+  matchConditions:
+    - name: hosting-pods
+      expression: >-
+        object.kind == 'Pod' && object.metadata.namespace == 'velero' && (
+          'velero.io/pod-volume-backup' in object.metadata.?labels.orValue({}) ||
+          'velero.io/pod-volume-restore' in object.metadata.?labels.orValue({}))

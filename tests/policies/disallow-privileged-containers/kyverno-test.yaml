@@ -9,6 +9,7 @@ resources:
 - resources.yaml
 exceptions:
 - ../../../gitops/policies/exception-kube-bench.yaml
+- ../../../gitops/policies/exception-velero-node-agent.yaml
 results:
 - policy: disallow-privileged-containers
   resources:
@@ -37,6 +38,21 @@ results:
   result: fail
 - policy: disallow-privileged-containers
   resources:
+  - privileged-velero-node-agent
+  kind: Pod
+  result: fail
+- policy: disallow-privileged-containers
+  resources:
+  - privileged-hosting-pod-other-ns
+  kind: Pod
+  result: fail
+- policy: disallow-privileged-containers
+  resources:
   - kube-bench-privileged
+  kind: Pod
+  result: skip
+- policy: disallow-privileged-containers
+  resources:
+  - velero-hosting-pod-privileged
   kind: Pod
   result: skip

@@ -115,7 +115,7 @@ EXCEPTIONS = {
                            "exception-velero-node-agent.yaml"],
     "pod-security-restricted": ["exception-local-path-helper.yaml", "exception-kube-bench.yaml",
                                 "exception-velero-node-agent.yaml"],
-    "disallow-privileged-containers": ["exception-kube-bench.yaml"],
+    "disallow-privileged-containers": ["exception-kube-bench.yaml", "exception-velero-node-agent.yaml"],
 }
 KUBE_BENCH = ("docker.io/aquasec/kube-bench@sha256:"
               "75506f222d1eb6ce2a751a5533bdc0a3b54c898e2e49e7751d0ee22cfb862679")
@@ -158,8 +158,12 @@ CASES = {
          ("privileged-deploy", deployment, set_(["securityContext", "privileged"], True)),
          # kube-bench exception: needs both the namespace and the label
          ("privileged-kube-bench-ns-other-label", pod, set_(["securityContext", "privileged"], True), "kube-bench"),
-         ("privileged-kube-bench-label-other-ns", pod, kube_bench(set_(["securityContext", "privileged"], True)))],
-        [("kube-bench-privileged", pod, kube_bench(set_(["securityContext", "privileged"], True)), "kube-bench")],
+         ("privileged-kube-bench-label-other-ns", pod, kube_bench(set_(["securityContext", "privileged"], True))),
+         # privileged only for Velero's hosting pods, not the node agent
+         ("privileged-velero-node-agent", pod, node_agent(set_(["securityContext", "privileged"], True)), "velero"),
+         ("privileged-hosting-pod-other-ns", pod, velero_hosting_pod(set_(["securityContext", "privileged"], True)))],
+        [("kube-bench-privileged", pod, kube_bench(set_(["securityContext", "privileged"], True)), "kube-bench"),
+         ("velero-hosting-pod-privileged", pod, velero_hosting_pod(set_(["securityContext", "privileged"], True)), "velero")],
     ),
     "disallow-host-path": (
         [("compliant", pod, None)],
