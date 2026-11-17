@@ -55,8 +55,10 @@
 # Zarf records a package even when a component failed (`zarf package list`
 # shows it at its version either way), so read the per-component status from
 # its record (Secret zarf-package-<name>) and count a package as deployed only
-# when every component Succeeded. Packages are compared by aggregate checksum,
-# so a rebuilt package is redeployed without a version bump; init by version.
+# when every component Succeeded. Packages are compared by aggregate checksum
+# plus build timestamp: the aggregate checksum covers the package contents but
+# not zarf.yaml, so a rebuild that only changes deploy actions would otherwise
+# look identical. Any rebuild redeploys without a version bump; init by version.
 - name: Read the deployed package records
   ansible.builtin.command:
     cmd: >-
@@ -74,7 +76,7 @@
       {%- for r in zarf_records.results if r.rc == 0 and r.stdout -%}
       {%-   set d = r.stdout | b64decode | from_json -%}
       {%-   set ok = (d.deployedComponents | map(attribute='status') | unique | list) == ['Succeeded'] -%}
-      {%-   set id = d.data.metadata.version if r.item == 'init' else d.data.metadata.aggregateChecksum -%}
+      {%-   set id = d.data.metadata.version if r.item == 'init' else d.data.metadata.aggregateChecksum ~ '@' ~ d.data.build.timestamp -%}
       {%-   set _ = out.update({r.item: id if ok else 'incomplete'}) -%}
       {%- endfor -%}
       {{ out | to_json }}
@@ -87,24 +89,34 @@
   ansible.builtin.debug:
     var: zarf_deployed
 
-- name: Read the checksums of the copied packages
-  ansible.builtin.command:
+# Read on the controller: zarf.yaml is the first entry of the archive, so
+# this takes well under a second. (`zarf package inspect --key` on the node
+# extracts and verifies the whole package, minutes for a large one; the
+# signature is still checked once, by `zarf package deploy --verify=always`.)
+- name: Read the definitions of the packages
+  # unarchive cannot stream a single member to stdout.
+  ansible.builtin.command:  # noqa: command-instead-of-module
     cmd: >-
-      {{ zarf_dir }}/zarf package inspect definition
-      {{ zarf_dir }}/packages/zarf-package-{{ item.name }}-amd64-{{ item.version }}.tar.zst
-      --key {{ zarf_dir }}/cosign.pub --no-color
+      tar -I zstd -xOf
+      {{ zarf_artifacts_dir }}/packages/zarf-package-{{ item.name }}-amd64-{{ item.version }}.tar.zst
+      zarf.yaml
   loop: "{{ zarf_packages }}"
   loop_control:
     label: "{{ item.name }} {{ item.version }}"
   register: zarf_definitions
   changed_when: false
+  delegate_to: localhost
+  become: false
 
-- name: Record the package checksums
+- name: Record the package identities
   ansible.builtin.set_fact:
     zarf_checksums: >-
-      {{ dict(zarf_definitions.results | map(attribute='item.name')
-              | zip(zarf_definitions.results | map(attribute='stdout') | map('from_yaml')
-                    | map(attribute='metadata') | map(attribute='aggregateChecksum'))) }}
+      {%- set out = {} -%}
+      {%- for r in zarf_definitions.results -%}
+      {%-   set d = r.stdout | from_yaml -%}
+      {%-   set _ = out.update({r.item.name: d.metadata.aggregateChecksum ~ '@' ~ d.build.timestamp}) -%}
+      {%- endfor -%}
+      {{ out }}
 
 - name: Initialize Zarf (registry and agent)
   ansible.builtin.command:

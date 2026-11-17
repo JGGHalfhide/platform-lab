@@ -3,7 +3,8 @@
 #
 #   scripts/airgap-packages.sh [package...]     (or: make airgap-packages)
 #
-# Packages (zarf/<name>/zarf.yaml): platform, policies, sample-app by default.
+# Packages (zarf/<name>/zarf.yaml): platform, policies, sample-app, monitoring
+# by default.
 # Output: build/airgap/packages/zarf-package-<name>-amd64-<version>.tar.zst.
 #
 # - Images are pulled from upstream registries and, for the sample app, from
@@ -20,7 +21,7 @@ source "$(dirname "$0")/lib.sh"
 OUT="${OUT:-$REPO_ROOT/build/airgap/packages}"
 COSIGN_KEY="${COSIGN_KEY:-$HOME/.config/platform-lab/cosign.key}"
 packages=("$@")
-[[ ${#packages[@]} -gt 0 ]] || packages=(platform policies sample-app)
+[[ ${#packages[@]} -gt 0 ]] || packages=(platform policies sample-app monitoring)
 
 mkdir -p "$OUT" "$REPO_ROOT/build/logs"
 trap registry_env_cleanup EXIT

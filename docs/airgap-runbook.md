@@ -331,3 +331,19 @@ Differences from the plan, all now in the repo:
 
 Week 6 acceptance met on the iMac (11/17): platform and sample app up with
 egress blocked and no image pull errors.
+
+## Later additions
+
+- **Monitoring (Week 7, 11/17):** package `zarf/monitoring`, added to the
+  zarf role's package list and to `make airgap-packages`; details and
+  results in `docs/observability.md`.
+- **Offline Ansible:** `base_update_packages: false` for the airgap group,
+  so `make airgap-up` works with egress blocked (it applied the etcd
+  metrics setting and the Grafana login, 6m37s).
+- **Deploy check:** the zarf role identifies a package by its aggregate
+  checksum plus build timestamp, read on the build host from the archive's
+  `zarf.yaml` (under a second). The aggregate checksum alone misses changes
+  to deploy actions, and `zarf package inspect --key` on the node took
+  minutes for the large packages; `zarf package deploy --verify=always`
+  still checks every signature.
+

@@ -86,5 +86,43 @@ svc/kps-grafana 3000:80`; the login is in the `grafana-admin` Secret
 | kube-bench | 80 pass / 1 fail (5.1.3, Argo CD; unchanged), `docs/scans/week7-monitoring-kube-bench.txt` |
 | Memory | node 7.3 GiB of 11.7 GiB in use; Grafana ~350 MiB, Prometheus ~330 MiB, Alloy, Loki, kube-state-metrics ~90 MiB each |
 
-Still to do: the Zarf package for the airgapped cluster (dashboards on both
-clusters).
+## Airgapped cluster (the iMac)
+
+Same charts, values, namespaces, dashboards and CoreDNS NetworkPolicy,
+packaged as `zarf/monitoring` (0.7.0, 976 MB, signed) and deployed with
+`make airgap-deploy` with egress blocked. Grafana: `kubectl --kubeconfig
+kubeconfig-airgap -n monitoring port-forward svc/kps-grafana 3001:80` from
+the build host (over the direct link), same login.
+
+Differences from the build cluster:
+
+- **Images** come from the Zarf registry (rewritten by the Zarf agent).
+  They are upstream images, not signed with the lab key, so the airgap
+  policy exception `zarf-platform-images` (zarf/policies) covers
+  `monitoring` and `monitoring-node` as it does `zarf` and `kyverno`.
+- **Namespace labels:** Zarf resets the labels of every namespace a chart
+  deploys into to its own set (`app.kubernetes.io/managed-by: zarf`,
+  `zarf.dev/agent: mutate`), which drops `monitoring-node`'s Pod Security
+  exemption; node-exporter's pods were then rejected as
+  `restricted:latest` and the Helm install timed out (twice). The package
+  installs kube-prometheus-stack without a Helm wait, then re-labels the
+  namespace, restarts the node-exporter DaemonSet (the controller backs off
+  ~16 minutes after repeated rejections) and waits for node-exporter,
+  Prometheus and Grafana. A redeploy that strips the labels again restores
+  them the same way.
+- **etcd metrics and the Grafana login** are applied by `make airgap-up`
+  (rke2 and grafana_admin roles), which now runs offline: the airgap group
+  skips the package update (`base_update_packages: false`).
+
+### Results (11/17, iMac)
+
+| Check | Result |
+|---|---|
+| Scrape targets | 13/13 up (API server, kubelet, etcd, CoreDNS, node-exporter, kube-state-metrics, Loki, Grafana, operator, Prometheus) |
+| Policy reports | 295 pass, 0 fail, 44 skip |
+| Filesystems | each STIG partition: `/`, `/home`, `/tmp`, `/var`, `/var/tmp`, `/var/log`, `/var/log/audit`, `/boot`, `/boot/efi` |
+| Loki | logs from all 7 namespaces |
+| Grafana | the three dashboards in `platform-lab` |
+| Memory before the stack | 3.7 GiB of 7.4 GiB in use, requests 42% |
+
+Dashboards show data on both clusters (Week 7 acceptance).

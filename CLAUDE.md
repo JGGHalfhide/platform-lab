@@ -161,8 +161,11 @@ Done (11/17): kube-prometheus-stack 92.17.0, Loki 7.5.0 (single binary, filesyst
 (grafana_admin role); etcd metrics :2381 (RKE2 etcd-expose-metrics, not opened in firewalld);
 CoreDNS NetworkPolicy; dashboards node/etcd/policy-reports in gitops/monitoring/dashboards;
 13/13 targets up; kube-bench 80/1 (docs/observability.md).
-Week 7 left: Zarf package for monitoring on the iMac, etcd restore drill (ask first),
-finish docs/recovery.md, tag v0.7.
+Done (11/17): monitoring on the iMac (zarf/monitoring 0.7.0): 13/13 targets, dashboards with data on
+both clusters. Zarf strips namespace labels -> package re-labels monitoring-node and restarts
+node-exporter after the kps install (noWait). Airgap group: base_update_packages false (offline
+Ansible works). zarf role identity = aggregateChecksum@build timestamp, read on the controller.
+Week 7 left: etcd restore drill (ask first; build cluster down), finish docs/recovery.md, tag v0.7.
 GitHub Actions item deferred to Week 8. Post 2 is the user's to write.
 Reminders for Week 8 (in ROADMAP.md): circle back to the deferred Week 4 GitHub Actions
 workflow; remind the user about docs/stack.md (full tech stack spec with each tool's use

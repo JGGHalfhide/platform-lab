@@ -1,5 +1,6 @@
 # Airgapped cluster only (zarf/policies). Zarf rewrites every image to its
-# registry, including the upstream platform images of Kyverno and Zarf itself
+# registry, including the upstream platform images of Kyverno, Zarf itself and
+# the monitoring stack (zarf/monitoring)
 # (by tag, e.g. 127.0.0.1:31999/kyverno/kyverno:v1.19.2-zarf-<crc>). Those are
 # not signed with the lab key; on the build cluster the same images come from
 # their upstream registries under platform-bootstrap-images. Their integrity
@@ -18,7 +19,7 @@ spec:
   matchConditions:
     - name: platform-namespaces
       expression: >-
-        object.metadata.namespace in ['zarf', 'kyverno']
+        object.metadata.namespace in ['zarf', 'kyverno', 'monitoring', 'monitoring-node']
 ---
 # The Zarf registry and agent charts set no app.kubernetes.io/name label
 # (Zarf's own components, not configurable through `zarf init`).

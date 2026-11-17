@@ -17,6 +17,8 @@ zarf_packages:
     version: 0.6.0
   - name: sample-app
     version: 0.6.0
+  - name: monitoring
+    version: 0.7.0
 
 # `zarf init` variables. Single node with 8 GB: one registry replica, no
 # autoscaling, a smaller volume than the 20Gi default.

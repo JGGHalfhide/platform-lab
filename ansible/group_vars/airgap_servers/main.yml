@@ -12,3 +12,8 @@ rke2_kubeconfig_dest: "{{ playbook_dir }}/../kubeconfig-airgap"
 
 # Zarf CLI and init package; must match ZARF_VERSION in scripts/airgap-stage.sh.
 zarf_version: v0.89.0
+
+# No unattended updates from the internet: the node is cut off after setup,
+# and once the cached repository metadata expires the update task would fail
+# on every run. Updates for the airgapped node are a deliberate, staged step.
+base_update_packages: false

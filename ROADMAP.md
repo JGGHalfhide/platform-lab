@@ -243,7 +243,7 @@ Week 6 in ROADMAP.md. Prepare the iMac as a second RKE2 node set (single node) u
 
 Goal: metrics, logs, and a measured restore.
 
-- [ ] kube-prometheus-stack and Loki (with Alloy; Promtail is end-of-life) deployed via Argo CD; included in the Zarf package (11/17: deployed on the build cluster, all targets up, docs/observability.md; Zarf package for the iMac to do)
+- [x] kube-prometheus-stack and Loki (with Alloy; Promtail is end-of-life) deployed via Argo CD; included in the Zarf package (11/17: build cluster via Argo CD, iMac via zarf/monitoring; 13/13 targets up on both; docs/observability.md)
 - [x] Grafana dashboards for node, etcd, and policy reports committed as JSON under `gitops/` (11/17: gitops/monitoring/dashboards/)
 - [x] etcd snapshot: scheduled snapshots configured, manual `rke2 etcd-snapshot save` (11/16: every 6 h, 12 kept; `make etcd-snapshot`, copy on the build host)
 - [ ] Restore drill: destroy state, `rke2 server --cluster-reset --cluster-reset-restore-path=<snapshot>`, verify; record elapsed time

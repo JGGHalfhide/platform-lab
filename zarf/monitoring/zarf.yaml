@@ -1,0 +1,114 @@
+# Monitoring for the airgapped cluster: the same charts, values, namespaces,
+# dashboards and CoreDNS NetworkPolicy as the build cluster
+# (gitops/apps/kube-prometheus-stack.yaml, loki.yaml, alloy.yaml;
+# gitops/monitoring). docs/observability.md.
+# Needs the grafana-admin Secret (grafana_admin role) and RKE2 etcd metrics
+# (rke2 role), both applied by `make airgap-up`, and the policies package
+# that lets the upstream monitoring images run (zarf-platform-images).
+kind: ZarfPackageConfig
+metadata:
+  name: monitoring
+  description: Prometheus, Grafana, Loki and Alloy with the platform dashboards
+  version: 0.7.0
+  architecture: amd64
+
+components:
+  # Namespaces first: node-exporter goes to monitoring-node.
+  - name: monitoring-base
+    required: true
+    manifests:
+      - name: monitoring-base
+        kustomizations:
+          - ../../gitops/monitoring
+
+  - name: kube-prometheus-stack
+    required: true
+    charts:
+      - name: kube-prometheus-stack
+        version: 92.17.0
+        url: https://prometheus-community.github.io/helm-charts
+        namespace: monitoring
+        releaseName: kps
+        valuesFiles:
+          - ../../gitops/values/kube-prometheus-stack.yaml
+        # Zarf resets the labels of every namespace a chart deploys into to
+        # its own set, which drops monitoring-node's Pod Security exemption
+        # (node-exporter's pods are then rejected as restricted:latest). So no
+        # Helm wait here: the labels are restored after the install, below,
+        # and the DaemonSet controller then creates the pod.
+        noWait: true
+    # As the charts and the operator reference them (live build cluster,
+    # 11/17). Prometheus and the config reloader are set through the
+    # Prometheus resource and operator flags, which image discovery can miss.
+    images:
+      - quay.io/prometheus-operator/prometheus-operator:v0.94.2
+      - quay.io/prometheus-operator/prometheus-config-reloader:v0.94.2
+      - quay.io/prometheus/prometheus:v3.15.1-distroless
+      - quay.io/prometheus/node-exporter:v1.12.1-distroless
+      - registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.20.0
+      - docker.io/grafana/grafana:13.3.0-distroless
+      - quay.io/kiwigrid/k8s-sidecar:2.14.1
+    actions:
+      onDeploy:
+        after:
+          - description: Pod Security labels on monitoring-node (as in gitops/monitoring/namespaces.yaml)
+            cmd: >-
+              ./zarf tools kubectl label namespace monitoring-node --overwrite
+              pod-security.kubernetes.io/enforce=privileged
+              pod-security.kubernetes.io/warn=restricted
+              pod-security.kubernetes.io/audit=restricted
+          # After rejected pod creations the DaemonSet controller backs off
+          # (about 16 minutes between attempts by the third); a restart makes
+          # it create the pod now that the namespace admits it.
+          - description: Retry node-exporter pod creation
+            cmd: ./zarf tools kubectl -n monitoring-node rollout restart daemonset/kps-prometheus-node-exporter
+          - description: node-exporter ready
+            wait:
+              cluster:
+                kind: DaemonSet
+                name: kps-prometheus-node-exporter
+                namespace: monitoring-node
+                condition: "{.status.numberReady}=1"
+            maxTotalSeconds: 600
+          - description: Prometheus ready
+            wait:
+              cluster:
+                kind: Pod
+                name: prometheus-kps-kube-prometheus-stack-prometheus-0
+                namespace: monitoring
+                condition: Ready
+            maxTotalSeconds: 600
+          - description: Grafana ready
+            wait:
+              cluster:
+                kind: Deployment
+                name: kps-grafana
+                namespace: monitoring
+                condition: Available
+
+  - name: loki
+    required: true
+    charts:
+      - name: loki
+        version: 7.5.0
+        url: https://grafana.github.io/helm-charts
+        namespace: monitoring
+        releaseName: loki
+        valuesFiles:
+          - ../../gitops/values/loki.yaml
+    images:
+      - docker.io/grafana/loki:3.6.11
+
+  - name: alloy
+    required: true
+    charts:
+      - name: alloy
+        version: 1.15.0
+        url: https://grafana.github.io/helm-charts
+        namespace: monitoring
+        releaseName: alloy
+        valuesFiles:
+          - ../../gitops/values/alloy.yaml
+    images:
+      - docker.io/grafana/alloy:v1.21.3
+      - quay.io/prometheus-operator/prometheus-config-reloader:v0.94.2@sha256:a1897c67478bc23434534e91ad3855280771196b1daf17144db9dbcb655bef71
