@@ -59,6 +59,8 @@ flowchart LR
   zreg --> kyv2 & obs2 & app2
 ```
 
+![platform-lab overview: provision, cluster, supply chain, policy and airgap stages, observe and recover on both clusters, and the measured results](docs/images/platform-overview.png)
+
 | Layer | Tooling |
 |---|---|
 | Provisioning | Terraform ([dmacvicar/libvirt](https://github.com/dmacvicar/terraform-provider-libvirt)), cloud-init, Ansible |
