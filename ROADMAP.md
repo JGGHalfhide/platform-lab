@@ -149,7 +149,7 @@ Goal: every platform image is scanned, has an SBOM, and is signed; unsigned imag
   - Storage format: cosign v3 defaults to an OCI 1.1 referrer holding a Sigstore bundle. The script uses `--new-bundle-format=false` (sign and verify) for the tag-based `sha256-<digest>.sig` / `.att` layout, which Kyverno and Zarf have supported longest. To confirm with the Kyverno policy test and the Zarf transfer (Week 6).
   - Idempotent: skips signing when a valid signature and SBOM attestation already exist. Without that, every run added another `.att` layer (each SBOM has a fresh timestamp and ID); signatures did not stack.
   - Tested: `alpine:3.22` (17 packages) and `busybox:1.37.0` (2 packages) signed and attested; the attestation subject is the index digest; verification with a different public key fails ("invalid signature").
-- [ ] Optional: GitHub Actions workflow for the connected build path (scan + SBOM on push)
+- [x] Optional: GitHub Actions workflow for the connected build path (scan + SBOM on push) (done in Week 8: `.github/workflows/supply-chain.yml`)
   - Deferred 11/15 (user's call); must be revisited, not dropped. Tracked again in Week 8 ("Circle back").
 - [x] Kyverno installed via Argo CD
   - 11/15: Kyverno v1.19.2, chart 3.9.2 (`gitops/apps/kyverno.yaml`; 1.20.0 was 3 days old, so the latest patch of 1.19). Multi-source Application: the chart plus `gitops/kyverno/` for the namespace `default` ServiceAccount. ServerSideApply (large CRDs). Single replica per controller. Restricted Pod Security, no exemption; no automounted tokens (projected tokens for the controllers). Rendered and audited first via `helm template` in the Argo CD repo-server (no Helm on the host).
@@ -263,15 +263,22 @@ Week 7 in ROADMAP.md. Deploy kube-prometheus-stack and Loki through Argo CD, com
 
 Goal: a repo a stranger can read and reproduce.
 
-- [ ] README: overview, architecture diagram (Mermaid), quickstart, repo layout, measured results table
-- [ ] ADRs in `docs/adr/` for the main platform choices (state the decision and context only)
+- [x] README: overview, architecture diagram (Mermaid), quickstart, repo layout, measured results table
+  - 11/17: Mermaid architecture, results table from docs/ (STIG, kube-bench, policy, supply chain, rebuild, airgap, observability, RTOs), quickstart incl. the Vault variable table and what a fork changes (repoURL, lab CA, cosign key in `verify-platform-images`), CI badges.
+- [x] ADRs in `docs/adr/` for the main platform choices (state the decision and context only)
+  - 11/17: 0001-0011 (RKE2 CIS, Rocky 9, firewalld on, Terraform + Ansible, Argo CD, Zot, supply-chain signing, Kyverno, Zarf + staged RPMs, observability, backup/restore); index in `docs/adr/README.md`.
 - [ ] Demo recording (asciinema or screen capture) of `make up` through a policy rejection
 - [ ] Secret scan with gitleaks over full history; fix anything found
-- [ ] LICENSE (MIT or Apache-2.0)
+  - 11/17: gitleaks job in CI (`ci.yml`, full history, v8.30.1 checksum-pinned). Local run still to do (installing gitleaks was blocked in the Claude Code session: user runs `pacman -S gitleaks` and `gitleaks git --redact -v .`). Interim pattern sweep of the full history (private keys, cloud/GitHub tokens, password hashes, kubeconfig/state/key files): nothing found; every Vault file version encrypted.
+- [x] LICENSE (MIT or Apache-2.0)
+  - 11/17: MIT.
 - [ ] Confirm no employer-derived names, configs, or hostnames anywhere in the repo
-- [ ] CI: terraform fmt/validate, ansible-lint, yamllint on pull requests
-- [ ] Circle back: GitHub Actions supply-chain workflow deferred from Week 4 (scan + SBOM on push for the connected build path; can share the CI workflow above)
-- [ ] Remind the user: full project spec in `docs/stack.md`, covering
+  - 11/17: every domain, hostname and email in tracked files and in the full history listed and checked: only lab names (`build-node-01`, `airgap-node-01`, `registry.platform-lab.internal`, ...) and public upstreams (docker.io, quay.io, ghcr.io, rockylinux.org, dl.dod.cyber.mil for the STIG, rancher.com's RKE2 signing key). Final sign-off is the user's (only they know what would match).
+- [x] CI: terraform fmt/validate, ansible-lint, yamllint on pull requests
+  - 11/17: `.github/workflows/ci.yml` on PRs and pushes to main: terraform fmt/validate, ansible-lint (dummy Vault key), yamllint (`.yamllint` matching the repo style), `make policy-test` (plus a check that generated cases are current), gitleaks. Actions pinned by SHA, tools by version and SHA-256.
+- [x] Circle back: GitHub Actions supply-chain workflow deferred from Week 4 (scan + SBOM on push for the connected build path; can share the CI workflow above)
+  - 11/17: `.github/workflows/supply-chain.yml`: every digest pinned in `gitops/` pulled from upstream and run through `publish-image.sh` with the new `PUSH=0` (SBOMs + Trivy gate, no push or signing; key and registry stay in the lab). On changes and weekly; SBOMs and reports kept as an artifact.
+- [x] Remind the user: full project spec in `docs/stack.md`, covering (11/17: written; user reminded)
   - Tech stack: every tool and component (host, provisioning, OS, Kubernetes, GitOps, registry, supply chain, policy, compliance, airgap, observability, recovery), with its version, what it does in this project, and why it was chosen over the alternatives (link the ADRs)
   - Workflow: the full end-to-end breakdown, from `make host` / `make up` through hardening, GitOps, image publishing (pull, SBOM, scan gate, push, sign, attest), policy admission, Zarf packaging and the airgapped deploy, to monitoring and restore
   - Diagram: a Mermaid source the user can render or redraw themselves
