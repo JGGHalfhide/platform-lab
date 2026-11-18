@@ -268,8 +268,8 @@ Goal: a repo a stranger can read and reproduce.
 - [x] ADRs in `docs/adr/` for the main platform choices (state the decision and context only)
   - 11/17: 0001-0011 (RKE2 CIS, Rocky 9, firewalld on, Terraform + Ansible, Argo CD, Zot, supply-chain signing, Kyverno, Zarf + staged RPMs, observability, backup/restore); index in `docs/adr/README.md`.
 - [ ] Demo recording (asciinema or screen capture) of `make up` through a policy rejection
-- [ ] Secret scan with gitleaks over full history; fix anything found
-  - 11/17: gitleaks job in CI (`ci.yml`, full history, v8.30.1 checksum-pinned). Local run still to do (installing gitleaks was blocked in the Claude Code session: user runs `pacman -S gitleaks` and `gitleaks git --redact -v .`). Interim pattern sweep of the full history (private keys, cloud/GitHub tokens, password hashes, kubeconfig/state/key files): nothing found; every Vault file version encrypted.
+- [x] Secret scan with gitleaks over full history; fix anything found
+  - 11/17: gitleaks 8.30.1 in CI (`ci.yml`, full clone): 81 commits scanned, no leaks found (run 44211222821). Also a pattern sweep of the full history (private keys, cloud/GitHub tokens, password hashes, kubeconfig/state/key files): nothing found; every Vault file version encrypted.
 - [x] LICENSE (MIT or Apache-2.0)
   - 11/17: MIT.
 - [ ] Confirm no employer-derived names, configs, or hostnames anywhere in the repo
