@@ -273,8 +273,9 @@ Goal: a repo a stranger can read and reproduce.
   - 11/17: gitleaks 8.30.1 in CI (`ci.yml`, full clone): 81 commits scanned, no leaks found (run 44211222821). Also a pattern sweep of the full history (private keys, cloud/GitHub tokens, password hashes, kubeconfig/state/key files): nothing found; every Vault file version encrypted.
 - [x] LICENSE (MIT or Apache-2.0)
   - 11/17: MIT.
-- [ ] Confirm no employer-derived names, configs, or hostnames anywhere in the repo
+- [x] Confirm no employer-derived names, configs, or hostnames anywhere in the repo
   - 11/17: every domain, hostname and email in tracked files and in the full history listed and checked: only lab names (`build-node-01`, `airgap-node-01`, `registry.platform-lab.internal`, ...) and public upstreams (docker.io, quay.io, ghcr.io, rockylinux.org, dl.dod.cyber.mil for the STIG, rancher.com's RKE2 signing key). Final sign-off is the user's (only they know what would match).
+  - 11/18: signed off by the user.
 - [x] CI: terraform fmt/validate, ansible-lint, yamllint on pull requests
   - 11/17: `.github/workflows/ci.yml` on PRs and pushes to main: terraform fmt/validate, ansible-lint (dummy Vault key), yamllint (`.yamllint` matching the repo style), `make policy-test` (plus a check that generated cases are current), gitleaks. Actions pinned by SHA, tools by version and SHA-256.
 - [x] Circle back: GitHub Actions supply-chain workflow deferred from Week 4 (scan + SBOM on push for the connected build path; can share the CI workflow above)
@@ -283,7 +284,7 @@ Goal: a repo a stranger can read and reproduce.
   - Tech stack: every tool and component (host, provisioning, OS, Kubernetes, GitOps, registry, supply chain, policy, compliance, airgap, observability, recovery), with its version, what it does in this project, and why it was chosen over the alternatives (link the ADRs)
   - Workflow: the full end-to-end breakdown, from `make host` / `make up` through hardening, GitOps, image publishing (pull, SBOM, scan gate, push, sign, attest), policy admission, Zarf packaging and the airgapped deploy, to monitoring and restore
   - Diagram: a Mermaid source the user can render or redraw themselves
-- [ ] Tag `v1.0`; publish Post 4 (architecture and lessons)
+- [ ] Tag `v1.0`; publish Post 4 (architecture and lessons) (v1.0 tagged 11/18; Post 4 is the user's)
 
 Acceptance: a fresh clone plus the README quickstart reproduces the build cluster.
 
