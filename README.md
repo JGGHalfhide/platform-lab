@@ -84,7 +84,7 @@ with versions and the end-to-end workflow, is in [docs/stack.md](docs/stack.md).
 | kube-bench (RKE2 CIS 1.9) | 81 pass / **0 fail** before and after OS hardening; 80 / 1 with the full platform (the one fail is Argo CD's wildcard RBAC, documented) | [kube-bench.md](docs/kube-bench.md) |
 | Admission policy | 8 Kyverno validation policies plus image signature verification, all in Enforce; 119 offline test cases (`make policy-test`); non-compliant pods rejected with readable messages | [policy-map.md](docs/policy-map.md), [week5-enforce-test.txt](docs/scans/week5-enforce-test.txt) |
 | Supply chain | Signed image admitted, unsigned and tag-only references rejected; `nginx:1.25.0` blocked by the scan gate (7 fixable CRITICAL) | [supply-chain.md](docs/supply-chain.md) |
-| Rebuild from nothing (`make down && make up`) | 4m34s to a Ready node (Week 1); 7m20s hardened (Week 2); **9m13s** with Argo CD, registry and the policy set enforcing (Week 5) | [ROADMAP.md](ROADMAP.md) |
+| Rebuild from nothing (`make down && make up`) | 4m34s to a Ready node (Week 1); 7m20s hardened (Week 2); **9m13s** with Argo CD, registry and the policy set enforcing (Week 5); **8m18s** from a fresh clone with the full stack incl. monitoring and Velero (Week 8) | [ROADMAP.md](ROADMAP.md) |
 | Idempotency | Second Ansible run reports `changed=0` (both clusters, airgap deploy included) | |
 | Airgapped deploy (iMac, egress blocked) | `make airgap-up` 9m54s; `make airgap-deploy` 11m20s; **0 image pull errors**; policy reports 193 pass / 0 fail; unsigned image rejected | [airgap-runbook.md](docs/airgap-runbook.md#results) |
 | Observability | 13/13 scrape targets up and dashboards with data on both clusters | [observability.md](docs/observability.md) |
@@ -93,6 +93,14 @@ with versions and the end-to-end workflow, is in [docs/stack.md](docs/stack.md).
 
 Scan reports are in [docs/scans/](docs/scans/) (OpenSCAP reports are gzipped
 HTML and XCCDF XML).
+
+## Demo
+
+[`docs/demo.cast`](docs/demo.cast) is a terminal recording of `make up` from a
+fresh clone through a signed image publish and three admission checks (signed
+pod admitted, unsigned pod and upstream `nginx:latest` rejected). Play it with
+`asciinema play docs/demo.cast`; it was recorded by
+[`scripts/demo.sh`](scripts/demo.sh) (`SKIP_UP=1` runs only the policy part).
 
 ## Quickstart
 

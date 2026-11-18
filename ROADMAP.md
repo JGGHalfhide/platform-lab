@@ -267,7 +267,8 @@ Goal: a repo a stranger can read and reproduce.
   - 11/17: Mermaid architecture, results table from docs/ (STIG, kube-bench, policy, supply chain, rebuild, airgap, observability, RTOs), quickstart incl. the Vault variable table and what a fork changes (repoURL, lab CA, cosign key in `verify-platform-images`), CI badges.
 - [x] ADRs in `docs/adr/` for the main platform choices (state the decision and context only)
   - 11/17: 0001-0011 (RKE2 CIS, Rocky 9, firewalld on, Terraform + Ansible, Argo CD, Zot, supply-chain signing, Kyverno, Zarf + staged RPMs, observability, backup/restore); index in `docs/adr/README.md`.
-- [ ] Demo recording (asciinema or screen capture) of `make up` through a policy rejection
+- [x] Demo recording (asciinema or screen capture) of `make up` through a policy rejection
+  - 11/18: `docs/demo.cast` (asciinema 3.2.1, gaps compressed to about 1m40s of playback; real `make up` time is printed in it; play with `asciinema play docs/demo.cast`), recorded from `scripts/demo.sh`: `make up` from a fresh clone, Argo CD apps synced, `make image` (SBOM, Trivy gate, push, cosign), signed pod admitted and ran, unsigned pod rejected by `verify-platform-images`, upstream `nginx:latest` rejected by four policies. `SKIP_UP=1 scripts/demo.sh` replays only the policy part against a running cluster (for a screen recording).
 - [x] Secret scan with gitleaks over full history; fix anything found
   - 11/17: gitleaks 8.30.1 in CI (`ci.yml`, full clone): 81 commits scanned, no leaks found (run 44211222821). Also a pattern sweep of the full history (private keys, cloud/GitHub tokens, password hashes, kubeconfig/state/key files): nothing found; every Vault file version encrypted.
 - [x] LICENSE (MIT or Apache-2.0)
@@ -285,6 +286,9 @@ Goal: a repo a stranger can read and reproduce.
 - [ ] Tag `v1.0`; publish Post 4 (architecture and lessons)
 
 Acceptance: a fresh clone plus the README quickstart reproduces the build cluster.
+
+- [x] Fresh-clone acceptance test
+  - 11/18: `make down` (2 s), then `git clone` of origin (73f290a) into a new directory and the README quickstart there: `make up` 498 s (8m18s), Ansible `ok=158 changed=117 failed=0`; 11 Argo CD apps Synced, all Healthy once the three quickstart images were published (`sample-app` Degraded until then, as the README says); second Ansible run `changed=0` (1m19s). Terraform state, kubeconfig and inventory then copied back to the working repo (`terraform plan`: no changes).
 
 Claude Code prompt:
 

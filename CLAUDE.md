@@ -178,7 +178,9 @@ quickstart with Vault variable table), ADRs 0001-0011 in docs/adr/, MIT LICENSE,
 .yamllint, CI (.github/workflows/ci.yml: fmt/validate, ansible-lint, yamllint, policy-test, gitleaks)
 and supply-chain.yml (deployed digests via `PUSH=0 scripts/publish-image.sh`: SBOM + Trivy gate).
 Employer check: only lab names and public upstreams (user to sign off). gitleaks in CI: 81 commits, no leaks;
-first CI and supply-chain runs green. Open: demo recording, fresh-clone rebuild test, tag v1.0, Post 4.
+first CI and supply-chain runs green.
+Done (11/18): fresh-clone acceptance test (make up 8m18s, 11 apps Healthy after the quickstart images,
+rerun changed=0) recorded as docs/demo.cast via scripts/demo.sh. Open: employer sign-off, tag v1.0, Post 4.
 GitHub Actions item deferred to Week 8. Post 2 is the user's to write.
 Reminders for Week 8 (in ROADMAP.md): circle back to the deferred Week 4 GitHub Actions
 workflow; remind the user about docs/stack.md (full tech stack spec with each tool's use
