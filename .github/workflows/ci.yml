@@ -1,0 +1,105 @@
+# Static checks on every pull request and push to main: Terraform fmt and
+# validate, ansible-lint, yamllint, the Kyverno policy tests, and a gitleaks
+# scan of the full history. Nothing here needs the lab (no VMs, no Vault key).
+#
+# Actions are pinned by commit SHA; downloaded tools are pinned by version and
+# checked against a SHA-256 recorded here (from each release's checksums file).
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  terraform:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.15.9
+      - name: terraform fmt
+        run: terraform fmt -check -recursive -diff terraform
+      - name: terraform validate
+        working-directory: terraform
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate
+
+  ansible-lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: pip install ansible-core==2.22.0 ansible-lint==26.10.1
+      - name: ansible-lint
+        working-directory: ansible
+        # The Vault key is not available here: a dummy one lets Ansible load
+        # its config; the encrypted vault.yml is skipped with a warning.
+        run: |
+          echo ci-dummy > "$RUNNER_TEMP/vault-pass"
+          export ANSIBLE_VAULT_PASSWORD_FILE="$RUNNER_TEMP/vault-pass"
+          ansible-galaxy collection install -r requirements.yml
+          ansible-lint
+
+  yamllint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: yamllint
+        run: |
+          pip install yamllint==1.38.0
+          yamllint -f github .
+
+  policy-test:
+    runs-on: ubuntu-24.04
+    env:
+      KYVERNO_VERSION: v1.19.2
+      KYVERNO_SHA256: 357eaf1df8bc24ddd5a73979fadeaae6a032e8710f11af264229756e4956bf4a
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Kyverno CLI
+        run: |
+          f="kyverno-cli_${KYVERNO_VERSION}_linux_x86_64.tar.gz"
+          curl -fsSLo "$RUNNER_TEMP/$f" "https://github.com/kyverno/kyverno/releases/download/${KYVERNO_VERSION}/$f"
+          echo "$KYVERNO_SHA256  $RUNNER_TEMP/$f" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$f" -C "$RUNNER_TEMP" kyverno
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      - name: Generated cases are up to date
+        run: |
+          python3 tests/policies/generate.py
+          git diff --exit-code tests/policies
+      - name: make policy-test
+        run: make policy-test
+
+  gitleaks:
+    runs-on: ubuntu-24.04
+    env:
+      GITLEAKS_VERSION: 8.30.1
+      GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Install gitleaks
+        run: |
+          f="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -fsSLo "$RUNNER_TEMP/$f" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/$f"
+          echo "$GITLEAKS_SHA256  $RUNNER_TEMP/$f" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$f" -C "$RUNNER_TEMP" gitleaks
+      - name: Scan full history
+        run: '"$RUNNER_TEMP/gitleaks" git --redact --verbose .'

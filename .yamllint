@@ -1,0 +1,25 @@
+# yamllint config for CI. Matches the repo's existing style (Kubernetes-style
+# sequence indentation, no leading "---", long CEL expressions and image
+# digests) and keeps the checks that catch real mistakes: syntax, duplicate
+# keys, inconsistent indentation within a file, truthy values, trailing spaces.
+extends: default
+
+ignore: |
+  build/
+  .ansible/
+  terraform/.terraform/
+
+rules:
+  document-start: disable
+  line-length: disable
+  comments:
+    min-spaces-from-content: 1
+  comments-indentation: disable
+  braces:
+    max-spaces-inside: 1
+  indentation:
+    spaces: consistent
+    indent-sequences: whatever
+  truthy:
+    allowed-values: ["true", "false"]
+    check-keys: false

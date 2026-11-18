@@ -19,6 +19,9 @@
 #    bundle: it is the format Kyverno and Zarf have supported longest.
 #    SIGN=0 skips this step.
 #
+# PUSH=0 stops after the gate (steps 1-3 only; no registry, no key): used by
+# CI (.github/workflows/supply-chain.yml) to re-check the deployed digests.
+#
 # Outputs land in build/images/<repo>/<digest>/ (gitignored); the last line
 # printed is the pushed reference, pinned by digest.
 set -euo pipefail
@@ -27,6 +30,7 @@ source "$(dirname "$0")/lib.sh"
 SCAN_PLATFORM="${SCAN_PLATFORM:-linux/amd64}"
 GATE_SEVERITY="${GATE_SEVERITY:-CRITICAL}"
 SIGN="${SIGN:-1}"
+PUSH="${PUSH:-1}"
 COSIGN_KEY="${COSIGN_KEY:-$HOME/.config/platform-lab/cosign.key}"
 
 src="${1:?usage: $0 <image-ref>}"
@@ -125,6 +129,12 @@ EOF
     exit 1
   fi
   echo "    passed"
+fi
+
+if [[ "$PUSH" == 0 ]]; then
+  echo "==> PUSH=0: not pushing or signing; outputs in $out"
+  echo "$pinned"
+  exit 0
 fi
 
 echo "==> Pushing to $REGISTRY/$repo:$tag"

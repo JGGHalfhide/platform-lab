@@ -1,0 +1,90 @@
+# Connected build path, in CI (deferred from Week 4): for every image the
+# platform deploys from its own registry (pinned by digest under gitops/),
+# pull the same digest from upstream, generate SBOMs (Syft) and run the Trivy
+# scan gate, exactly as `make image` does on the build host (PUSH=0 stops
+# before push and signing: the registry and the cosign key stay in the lab).
+#
+# Runs when the deployed images, the scan exceptions or the script change,
+# and weekly, so newly published CVEs against running digests show up.
+# SBOMs and scan reports are kept as a workflow artifact.
+name: supply-chain
+
+on:
+  pull_request:
+    paths:
+      - gitops/**
+      - .trivyignore.yaml
+      - scripts/publish-image.sh
+      - scripts/lib.sh
+      - .github/workflows/supply-chain.yml
+  push:
+    branches: [main]
+    paths:
+      - gitops/**
+      - .trivyignore.yaml
+      - scripts/publish-image.sh
+      - scripts/lib.sh
+      - .github/workflows/supply-chain.yml
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-24.04
+    env:
+      CRANE_VERSION: v0.22.1
+      CRANE_SHA256: 0ab7a1d6932a213aed964ce97666c3077fe691c8606413674a8b3e0b9ec4cda0
+      SYFT_VERSION: 1.55.0
+      SYFT_SHA256: bb65249542db5fedeeb4d3f9b018b75e7264dbfbbb10486f044581a92f90490d
+      TRIVY_VERSION: 0.76.2
+      TRIVY_SHA256: bc0fc726e017b8927a62b2d3531d7a84ee01769daf5c99ed866dced54089fdbf
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Install crane, syft, trivy
+        run: |
+          bin="$RUNNER_TEMP/bin"; mkdir -p "$bin"
+          get() { # url sha256 member
+            f="$RUNNER_TEMP/$(basename "$1")"
+            curl -fsSLo "$f" "$1"
+            echo "$2  $f" | sha256sum -c -
+            tar -xzf "$f" -C "$bin" "$3"
+          }
+          get "https://github.com/google/go-containerregistry/releases/download/${CRANE_VERSION}/go-containerregistry_Linux_x86_64.tar.gz" "$CRANE_SHA256" crane
+          get "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/syft_${SYFT_VERSION}_linux_amd64.tar.gz" "$SYFT_SHA256" syft
+          get "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" "$TRIVY_SHA256" trivy
+          echo "$bin" >> "$GITHUB_PATH"
+      - name: Deployed images
+        id: images
+        # 127.0.0.1:30500/<repo>@<digest> in the manifests is the platform
+        # registry; `make image` keeps upstream digests, and every image
+        # there comes from Docker Hub.
+        run: |
+          grep -rhoE '127\.0\.0\.1:30500/[^ "]+@sha256:[0-9a-f]{64}' gitops --include='*.yaml' |
+            sort -u | sed 's|^127\.0\.0\.1:30500/|docker.io/|' | tee images.txt
+          test -s images.txt
+      - name: SBOM and scan gate (PUSH=0)
+        run: |
+          rc=0
+          while read -r ref; do
+            echo "::group::$ref"
+            PUSH=0 ./scripts/publish-image.sh "$ref" || { rc=1; echo "::error::scan gate failed for $ref"; }
+            echo "::endgroup::"
+          done < images.txt
+          exit "$rc"
+      - name: Keep SBOMs and reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sbom-and-scans
+          path: |
+            build/images/**/sbom.*.json
+            build/images/**/trivy*
+          if-no-files-found: warn
+          retention-days: 30
