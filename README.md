@@ -96,11 +96,15 @@ HTML and XCCDF XML).
 
 ## Demo
 
-[`docs/demo.cast`](docs/demo.cast) is a terminal recording of `make up` from a
-fresh clone through a signed image publish and three admission checks (signed
-pod admitted, unsigned pod and upstream `nginx:latest` rejected). Play it with
-`asciinema play docs/demo.cast`; it was recorded by
-[`scripts/demo.sh`](scripts/demo.sh) (`SKIP_UP=1` runs only the policy part).
+![make up from a fresh clone, then a signed pod admitted and an unsigned and a non-compliant pod rejected](docs/demo.gif)
+
+The GIF is sped up (the build section most; the real `make up` time, 498 s, is
+printed in it). [`docs/demo.cast`](docs/demo.cast) is the full terminal
+recording of `make up` from a fresh clone through a signed image publish and
+three admission checks (signed pod admitted, unsigned pod and upstream
+`nginx:latest` rejected). Play it with `asciinema play docs/demo.cast`; it was
+recorded by [`scripts/demo.sh`](scripts/demo.sh) (`SKIP_UP=1` runs only the
+policy part).
 
 ## Quickstart
 
