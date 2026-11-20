@@ -312,23 +312,14 @@ Decide these before the week that depends on them.
 
 ---
 
-## After Week 8 — Phase 2 and 3 skeletons
+## After Week 8: next projects
 
-### Phase 2: Local LLM inference on the platform
-
-- [ ] Choose a small quantized model; serve with vLLM or llama.cpp in a pod
-- [ ] Package model and runtime for the airgapped cluster via Zarf
-- [ ] KEDA autoscaling on request queue depth
-- [ ] OpenTelemetry and Prometheus metrics: latency, tokens per second, queue depth
-- [ ] Load test; document cost and latency per million tokens (CPU, then a short rented GPU run)
-- [ ] Post: inference platform results
-
-### Phase 3: Reliability layer
-
-- [ ] SLO definitions and burn-rate alerts for the sample app and the inference service
-- [ ] Chaos Mesh or Litmus experiments with a postmortem per experiment under `docs/postmortems/`
-- [ ] LLM triage agent: retrieval over runbooks and postmortems, with a small evaluation set and recorded accuracy
-- [ ] Post: SRE layer results
+Phase 2 (local LLM inference, CPU-only, airgapped) and Phase 3 (agents on
+Kubernetes) continue in a separate repo, local-airgap-LLM, which deploys onto
+the clusters this repo builds. The iMac is retired there; the airgap target
+becomes a resized second VM (`airgap_rehearsal`). Changes it needs here (VM
+size, an Argo CD Application pointing at it, Kyverno rules for model
+artifacts) are made in this repo and noted in both.
 
 ---
 
