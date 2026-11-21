@@ -34,6 +34,7 @@ Images published so far:
 | `nginx:1.25.0` | - | 7 fixable CRITICAL | blocked by the gate, not pushed |
 | `stefanprodan/podinfo:6.17.0` (sample app, Week 6) | 123 | 0 / 3 | yes |
 | `library/postgres:17.12-alpine3.24` (sample app, Week 6) | 51 | 0 / 0 after the `gosu` exception (26 suppressed) | yes |
+| `ggml-org/llama.cpp:server-v1.0.0-b12359-b1b770d` (ghcr.io; local-airgap-LLM inference runtime, 11/21) | 388 | 0 / 0 | yes |
 
 ### Scan exceptions
 
