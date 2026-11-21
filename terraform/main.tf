@@ -18,8 +18,9 @@ module "build_node" {
   ssh_public_key  = local.ssh_public_key
 }
 
-# Stand-in for the disconnected iMac, sized like it (8 GB). Used to rehearse
-# docs/airgap-runbook.md before running it on the iMac; egress is blocked on
+# Disconnected target VM. Was a stand-in for the iMac (8 GB) used to rehearse
+# docs/airgap-runbook.md; since 11/21 it is the airgap target for
+# local-airgap-LLM, sized for inference (8 vCPU, 12 GiB). Egress is blocked on
 # the guest by the same step as on the iMac. Off unless airgap_rehearsal = true.
 module "airgap_rehearsal" {
   source = "./modules/rocky-vm"

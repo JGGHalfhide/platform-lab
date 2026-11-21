@@ -40,9 +40,9 @@ variable "mac_address" {
 }
 
 variable "vcpus" {
-  description = "Number of virtual CPUs."
+  description = "Number of virtual CPUs (8 for llama.cpp inference, local-airgap-LLM docs/resource-plan.md)."
   type        = number
-  default     = 4
+  default     = 8
 }
 
 variable "memory_mib" {
@@ -93,15 +93,15 @@ variable "rehearsal_mac_address" {
 }
 
 variable "rehearsal_vcpus" {
-  description = "Virtual CPUs for the rehearsal VM."
+  description = "Virtual CPUs for the rehearsal VM (the airgap target for local-airgap-LLM)."
   type        = number
-  default     = 4
+  default     = 8
 }
 
 variable "rehearsal_memory_mib" {
-  description = "Memory in MiB for the rehearsal VM; matches the iMac (8 GB)."
+  description = "Memory in MiB for the rehearsal VM; sized for the platform plus a ~5 GiB inference pod (local-airgap-LLM docs/resource-plan.md)."
   type        = number
-  default     = 8192
+  default     = 12288
 }
 
 variable "rehearsal_disk_size_gib" {
