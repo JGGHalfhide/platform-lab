@@ -321,6 +321,11 @@ becomes a resized second VM (`airgap_rehearsal`). Changes it needs here (VM
 size, an Argo CD Application pointing at it, Kyverno rules for model
 artifacts) are made in this repo and noted in both.
 
+Done here so far: VMs sized (b293cda, 11/21); image policies cover image
+volumes (250acd1, 11/21); Argo CD Application `local-airgap-llm`
+(gitops/apps/local-airgap-llm.yaml, 11/22) syncing its `deploy/` directory
+into the `llm` namespace.
+
 ---
 
 ## Ground rules

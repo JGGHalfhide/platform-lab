@@ -1,0 +1,22 @@
+# Inference endpoint from the local-airgap-LLM repo (its deploy/ directory):
+# llama-server serving a signed model image mounted as an image volume, in
+# the llm namespace. The runtime image (`make image`) and the model image
+# (`make model` in local-airgap-LLM) must be in the platform registry first.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: local-airgap-llm
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/JGGHalfhide/local-airgap-LLM.git
+    targetRevision: main
+    path: deploy
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: llm
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
