@@ -43,6 +43,14 @@ self-monitoring.
   login in their environment.
 - **Images:** upstream, by exact repository, in `monitoring` and
   `monitoring-node` only (`platform-bootstrap-images`).
+- **inotify limits (fixed 11/22):** from 11/18 the node ran out of inotify
+  instances (kernel default 128 per user; root held 127: kubelet, API
+  server, controllers, containerd). The kubelet then wrote `failed to create
+  fsnotify watcher: too many open files` into followed log streams, about
+  1,000-1,600 lines an hour in Loki across every namespace. The base role
+  now sets `fs.inotify.max_user_instances=8192` and
+  `fs.inotify.max_user_watches=524288` (`base_sysctls`,
+  `/etc/sysctl.d/90-kubernetes-node.conf`; tag `sysctl` to apply alone).
 
 ## Scrape targets
 

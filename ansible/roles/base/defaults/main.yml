@@ -42,3 +42,13 @@ base_nm_unmanaged_interfaces:
 # Lab SSH key for the admin user. cloud-init installs it on new VMs; managed
 # here too so a key change reaches existing VMs.
 base_admin_ssh_public_key: "{{ lookup('ansible.builtin.file', '~/.ssh/platform-lab_ecdsa.pub') }}"
+
+# Node sysctls that Kubernetes needs beyond the kernel defaults. Each key is
+# set live and written to its own file (as in the hardening role).
+# inotify: the default 128 instances per user ran out once the platform's
+# pods grew (kubelet log follows, Alloy, controllers all run as root):
+# "failed to create fsnotify watcher: too many open files" in every followed
+# log stream from 11/18. 8192 / 524288 are the usual Kubernetes node values.
+base_sysctls:
+  fs.inotify.max_user_instances: 8192
+  fs.inotify.max_user_watches: 524288

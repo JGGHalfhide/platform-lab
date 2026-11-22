@@ -28,6 +28,18 @@
     reboot_timeout: 600
   when: base_needs_restarting.rc == 1
 
+- name: Set Kubernetes node sysctls
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    sysctl_file: /etc/sysctl.d/90-kubernetes-node.conf
+    sysctl_set: true
+    reload: false
+  loop: "{{ base_sysctls | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  tags: [sysctl]
+
 - name: Keep SELinux enforcing
   ansible.posix.selinux:
     policy: targeted
