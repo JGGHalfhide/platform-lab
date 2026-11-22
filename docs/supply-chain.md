@@ -56,7 +56,8 @@ see `docs/airgap-runbook.md`.
 `gitops/policies/verify-platform-images.yaml`, a Kyverno
 `ImageValidatingPolicy` (Kyverno v1.19.2), deployed by the `policies` Argo
 CD Application. For every pod (and, through autogen, every workload) using an
-image from `127.0.0.1:30500/*`:
+image from `127.0.0.1:30500/*`, as a container image or as an image volume
+(`spec.volumes[].image`, used by local-airgap-LLM to mount its model):
 
 1. The image must be pinned by digest.
 2. The image must carry a cosign signature that verifies with `pki/cosign.pub`.
@@ -68,6 +69,13 @@ each `127.0.0.1:30500/<repo>@<digest>` as
 `zot.zot.svc.cluster.local:5000/<repo>@<digest>`, the same registry through
 its Service. That hop is plain HTTP inside the cluster; the digest and the
 signature carry the integrity, so the transport does not need to be trusted.
+
+Kyverno's default image extractors cover containers only: in a test with
+Kyverno 1.19.2, an unsigned image volume was admitted until the policy's own
+extractor listed `spec.volumes[].image.reference` too.
+`restrict-image-registries` and `disallow-latest-tag` check image volumes for
+the same reason, and `pod-security-restricted` allows the `image` volume type
+(as the built-in Pod Security admission does since Kubernetes 1.36).
 
 Limits:
 

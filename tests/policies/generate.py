@@ -155,6 +155,10 @@ def node_exporter(*changes):
         for c in changes:
             c(spec, meta)
     return change
+def image_volume(ref):
+    return add_volume({"name": "model", "image": {"reference": ref, "pullPolicy": "IfNotPresent"}})
+
+
 HOST_PROC = {"name": "proc", "hostPath": {"path": "/proc"}}
 HOST_PODS = {"name": "host-pods", "hostPath": {"path": "/var/lib/kubelet/pods"}}
 VELERO = "docker.io/velero/velero:v1.18.4"
@@ -200,7 +204,9 @@ CASES = {
          ("net-bind-service", pod, set_(["securityContext", "capabilities", "add"], ["NET_BIND_SERVICE"])),
          ("container-level-seccomp", pod, lambda s, m: (
              s["securityContext"].pop("seccompProfile"),
-             c0(s)["securityContext"].update({"seccompProfile": {"type": "RuntimeDefault"}})))],
+             c0(s)["securityContext"].update({"seccompProfile": {"type": "RuntimeDefault"}}))),
+         ("image-volume", pod, image_volume(SIGNED)),
+         ("image-volume-deploy", deployment, image_volume(SIGNED))],
         [("host-network", pod, set_(["hostNetwork"], True, "pod")),
          ("host-pid", pod, set_(["hostPID"], True, "pod")),
          ("host-port", pod, set_(["ports"], [{"containerPort": 80, "hostPort": 80}])),
@@ -231,10 +237,12 @@ CASES = {
     ),
     "disallow-latest-tag": (
         [("compliant", pod, None),
+         ("image-volume-tagged", pod, image_volume("127.0.0.1:30500/library/alpine:3.22")),
          ("tagged", pod, set_(["image"], "127.0.0.1:30500/library/alpine:3.22")),
          ("digest-only", pod, set_(["image"], "127.0.0.1:30500/library/alpine@sha256:"
                                    "49340b346798875b5592e5d420241f2f9cfba5f47e62ebb1446a1b34734e898f"))],
         [("latest", pod, set_(["image"], "127.0.0.1:30500/library/alpine:latest")),
+         ("image-volume-latest", pod, image_volume("127.0.0.1:30500/library/alpine:latest")),
          ("untagged", pod, set_(["image"], "127.0.0.1:30500/library/alpine")),
          ("untagged-short-name", pod, set_(["image"], "alpine")),
          ("latest-deploy", deployment, set_(["image"], "127.0.0.1:30500/library/alpine:latest"))],
@@ -271,6 +279,7 @@ CASES = {
     ),
     "restrict-image-registries": (
         [("compliant", pod, None),
+         ("image-volume-platform", pod, image_volume(SIGNED)),
          ("zarf-registry", pod, set_(["image"], "127.0.0.1:31999/library/alpine:3.22")),
          # platform-bootstrap-images exception: listed repos, platform namespaces
          ("argocd-upstream", pod, set_(["image"], ARGOCD), "argocd"),
@@ -280,6 +289,8 @@ CASES = {
          # kube-bench-image exception: the pinned scanner, in its namespace, with its label
          ("kube-bench-image", pod, kube_bench(set_(["image"], KUBE_BENCH)), "kube-bench")],
         [("docker-hub", pod, set_(["image"], "docker.io/library/alpine:3.22")),
+         ("image-volume-docker-hub", pod, image_volume("docker.io/library/alpine:3.22")),
+         ("image-volume-docker-hub-deploy", deployment, image_volume("docker.io/library/alpine:3.22")),
          ("short-name", pod, set_(["image"], "alpine:3.22")),
          ("lookalike-host", pod, set_(["image"], "127.0.0.1:30500.evil.example/library/alpine:3.22")),
          ("other-port", pod, set_(["image"], "127.0.0.1:5000/library/alpine:3.22")),

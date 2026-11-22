@@ -34,6 +34,42 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
+  name: image-volume-tagged
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: web
+spec:
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: app
+    image: 127.0.0.1:30500/library/alpine:3.22@sha256:49340b346798875b5592e5d420241f2f9cfba5f47e62ebb1446a1b34734e898f
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+    resources:
+      requests:
+        cpu: 10m
+        memory: 16Mi
+      limits:
+        memory: 32Mi
+  volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: model
+    image:
+      reference: 127.0.0.1:30500/library/alpine:3.22
+      pullPolicy: IfNotPresent
+---
+apiVersion: v1
+kind: Pod
+metadata:
   name: tagged
   namespace: apps
   labels:
@@ -126,6 +162,42 @@ spec:
   volumes:
   - name: tmp
     emptyDir: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: image-volume-latest
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: web
+spec:
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: app
+    image: 127.0.0.1:30500/library/alpine:3.22@sha256:49340b346798875b5592e5d420241f2f9cfba5f47e62ebb1446a1b34734e898f
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+    resources:
+      requests:
+        cpu: 10m
+        memory: 16Mi
+      limits:
+        memory: 32Mi
+  volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: model
+    image:
+      reference: 127.0.0.1:30500/library/alpine:latest
+      pullPolicy: IfNotPresent
 ---
 apiVersion: v1
 kind: Pod

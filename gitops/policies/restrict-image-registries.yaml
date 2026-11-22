@@ -42,12 +42,17 @@ spec:
   variables:
     - name: trusted
       expression: "['127.0.0.1:30500/', '127.0.0.1:31999/']"
-    - name: untrusted
+    # Container images and image volume references.
+    - name: images
       expression: >-
         (object.spec.containers
         + object.spec.?initContainers.orValue([])
         + object.spec.?ephemeralContainers.orValue([]))
         .map(c, c.image)
+        + object.spec.?volumes.orValue([]).filter(v, has(v.image)).map(v, v.image.reference)
+    - name: untrusted
+      expression: >-
+        variables.images
         .filter(i, !(variables.trusted + exceptions.allowedValues).exists(p, i.startsWith(p)))
   validations:
     - expression: size(variables.untrusted) == 0

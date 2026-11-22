@@ -18,6 +18,11 @@ results:
   result: pass
 - policy: restrict-image-registries
   resources:
+  - image-volume-platform
+  kind: Pod
+  result: pass
+- policy: restrict-image-registries
+  resources:
   - zarf-registry
   kind: Pod
   result: pass
@@ -50,6 +55,16 @@ results:
   resources:
   - docker-hub
   kind: Pod
+  result: fail
+- policy: restrict-image-registries
+  resources:
+  - image-volume-docker-hub
+  kind: Pod
+  result: fail
+- policy: restrict-image-registries
+  resources:
+  - image-volume-docker-hub-deploy
+  kind: Deployment
   result: fail
 - policy: restrict-image-registries
   resources:

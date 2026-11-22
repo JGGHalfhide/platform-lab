@@ -47,15 +47,15 @@ Kyverno's webhooks skip it anyway).
 | | SELinux type a container type; `user` and `role` unset | SELinux (baseline) | 5.7.3 | V-254800 / CNTR-K8-002011 |
 | | `procMount: Default` | /proc Mount Type (baseline) | 5.7.3 | V-254800 / CNTR-K8-002011 |
 | | only the safe sysctl set | Sysctls (baseline) | 5.7.3 | V-254800 / CNTR-K8-002011 |
-| | only configMap, csi, downwardAPI, emptyDir, ephemeral, persistentVolumeClaim, projected, secret volumes | Volume Types (restricted) | 5.7.3 | V-254800 / CNTR-K8-002011 |
+| | only configMap, csi, downwardAPI, emptyDir, ephemeral, image, persistentVolumeClaim, projected, secret volumes (`image` as in Kubernetes 1.36's Pod Security admission) | Volume Types (restricted) | 5.7.3 | V-254800 / CNTR-K8-002011 |
 | | `allowPrivilegeEscalation: false` in every container | Privilege Escalation (restricted) | 5.2.6 Minimize the admission of containers with allowPrivilegeEscalation | V-242437 / CNTR-K8-002010 (intent), V-254800 / CNTR-K8-002011 |
 | | `runAsNonRoot: true` (pod or every container) | Running as Non-root (restricted) | 5.2.7 Minimize the admission of root containers | V-242437 / CNTR-K8-002010 (intent: `MustRunAsNonRoot`), V-254800 / CNTR-K8-002011 |
 | | `runAsUser` not 0 | Running as Non-root user (restricted) | 5.2.7 | V-242437 / CNTR-K8-002010 (intent), V-254800 / CNTR-K8-002011 |
 | | seccomp `RuntimeDefault` or `Localhost` (pod or every container) | Seccomp (baseline and restricted) | 5.7.2 Ensure that the seccomp profile is set to docker/default in your Pod definitions | V-254800 / CNTR-K8-002011 |
 | | drop `ALL`; add only `NET_BIND_SERVICE` | Capabilities (baseline and restricted) | 5.2.8 NET_RAW capability, 5.2.9 added capabilities, 5.2.10 capabilities assigned | V-254800 / CNTR-K8-002011 |
-| `disallow-latest-tag` | image pinned to a tag other than `latest`, or a digest | (none) | 5.5.1 Configure Image Provenance (partly: a known, reviewable image) | No direct rule |
-| `restrict-image-registries` | images only from `127.0.0.1:30500/` or `127.0.0.1:31999/` (Zarf) | (none) | 5.5.1 Configure Image Provenance using ImagePolicyWebhook admission controller (met with a Kyverno webhook instead) | No direct rule |
-| `verify-platform-images` | platform registry images pinned by digest and signed with `pki/cosign.pub` | (none) | 5.5.1 (same) | No direct rule |
+| `disallow-latest-tag` | image (container or image volume) pinned to a tag other than `latest`, or a digest | (none) | 5.5.1 Configure Image Provenance (partly: a known, reviewable image) | No direct rule |
+| `restrict-image-registries` | images (containers and image volumes) only from `127.0.0.1:30500/` or `127.0.0.1:31999/` (Zarf) | (none) | 5.5.1 Configure Image Provenance using ImagePolicyWebhook admission controller (met with a Kyverno webhook instead) | No direct rule |
+| `verify-platform-images` | platform registry images (containers and image volumes) pinned by digest and signed with `pki/cosign.pub` | (none) | 5.5.1 (same) | No direct rule |
 | `disallow-secret-env` | no `env[].valueFrom.secretKeyRef`, no `envFrom[].secretRef` | (none) | (none) | **V-242415 / CNTR-K8-001160** (high) Secrets in Kubernetes must not be stored as environment variables |
 | `require-resources` | `requests.cpu`, `requests.memory`, `limits.memory` | (none) | (none) | No direct rule (availability; supports V-242417's separation of workloads by keeping one from starving the node) |
 | `require-labels` | `app.kubernetes.io/name` | (none) | (none) | No direct rule (operations: lets reports, dashboards and NetworkPolicies select workloads) |

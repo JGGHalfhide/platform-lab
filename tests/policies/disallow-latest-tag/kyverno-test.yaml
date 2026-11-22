@@ -15,6 +15,11 @@ results:
   result: pass
 - policy: disallow-latest-tag
   resources:
+  - image-volume-tagged
+  kind: Pod
+  result: pass
+- policy: disallow-latest-tag
+  resources:
   - tagged
   kind: Pod
   result: pass
@@ -26,6 +31,11 @@ results:
 - policy: disallow-latest-tag
   resources:
   - latest
+  kind: Pod
+  result: fail
+- policy: disallow-latest-tag
+  resources:
+  - image-volume-latest
   kind: Pod
   result: fail
 - policy: disallow-latest-tag

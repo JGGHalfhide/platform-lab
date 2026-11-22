@@ -1,8 +1,9 @@
 # Images from the in-cluster registry must be pinned by digest and carry a
 # valid cosign signature from the lab key (pki/cosign.pub), made by
 # `make image`. Week 4 scope: images pulled through the registry's NodePort
-# (127.0.0.1:30500/*). Images from other registries are not matched yet; the
-# Week 5 "trusted registries only" policy closes that gap.
+# (127.0.0.1:30500/*), as container images or image volumes (image volumes
+# carry local-airgap-LLM's model). Images from other registries are not
+# matched yet; the Week 5 "trusted registries only" policy closes that gap.
 #
 # - Pods pull via 127.0.0.1:30500 (the node's localhost), which Kyverno cannot
 #   reach from its own pod, and Kyverno prefetches every image matched by
@@ -40,15 +41,19 @@ spec:
         apiVersions: [v1]
         operations: [CREATE, UPDATE]
         resources: [pods]
-  # Container images from the registry NodePort, rewritten to the address
-  # Kyverno can reach. Runs alongside the default extractors.
+  # Container images and image volume references from the registry
+  # NodePort, rewritten to the address Kyverno can reach. Runs alongside the
+  # default extractors, which do not include image volumes (tested with
+  # Kyverno 1.19.2: an unsigned image volume was admitted without this).
   images:
     - name: platform
       expression: >-
-        (object.spec.containers
+        ((object.spec.containers
         + (has(object.spec.initContainers) ? object.spec.initContainers : [])
         + (has(object.spec.ephemeralContainers) ? object.spec.ephemeralContainers : []))
         .map(c, c.image)
+        + (has(object.spec.volumes) ? object.spec.volumes : [])
+        .filter(v, has(v.image)).map(v, v.image.reference))
         .filter(i, i.startsWith('127.0.0.1:30500/'))
         .map(i, 'zot.zot.svc.cluster.local:5000/' + i.substring(16))
   matchImageReferences:

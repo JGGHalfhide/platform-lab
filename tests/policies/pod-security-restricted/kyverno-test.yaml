@@ -35,6 +35,16 @@ results:
   result: pass
 - policy: pod-security-restricted
   resources:
+  - image-volume
+  kind: Pod
+  result: pass
+- policy: pod-security-restricted
+  resources:
+  - image-volume-deploy
+  kind: Deployment
+  result: pass
+- policy: pod-security-restricted
+  resources:
   - host-network
   kind: Pod
   result: fail

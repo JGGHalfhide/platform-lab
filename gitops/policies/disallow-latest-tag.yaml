@@ -36,11 +36,13 @@ spec:
           operator: NotIn
           values: [kube-system]
   variables:
+    # Container images and image volume references.
     - name: images
       expression: >-
         (object.spec.containers
         + object.spec.?initContainers.orValue([])
         + object.spec.?ephemeralContainers.orValue([])).map(c, c.image)
+        + object.spec.?volumes.orValue([]).filter(v, has(v.image)).map(v, v.image.reference)
     - name: unpinned
       expression: >-
         variables.images.filter(i, !image(i).containsDigest() && image(i).tag() == 'latest')
