@@ -1,0 +1,60 @@
+# KEDA v2.21.1 and the KEDA HTTP add-on v0.16.0, from the pinned upstream
+# release manifests plus patches (same approach as gitops/argocd). Used by
+# local-airgap-LLM to scale its inference server to zero and back
+# (local-airgap-LLM docs/adr/0005).
+# Release manifest SHA-256 (checked 11/22 when pinned):
+#   keda-2.21.1.yaml              a84d4e6a53df3ad88f6a69e3288b6cbbd699746f9deaea8c7237cbc345061d58
+#   keda-add-ons-http-0.16.0.yaml eea0e57bb2ede0ab712a918a24df09b1fa0e8948880773b16920c3fbf05d3953
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - https://github.com/kedacore/keda/releases/download/v2.21.1/keda-2.21.1.yaml
+  - https://github.com/kedacore/http-add-on/releases/download/v0.16.0/keda-add-ons-http-0.16.0.yaml
+  - networkpolicy-interceptor.yaml
+# All six images from the platform registry, pinned by digest, published and
+# signed by `make image` (the add-on's three under a scoped Trivy exception,
+# CVE-2026-77524, see .trivyignore.yaml).
+images:
+  - name: ghcr.io/kedacore/keda
+    newName: 127.0.0.1:30500/kedacore/keda
+    digest: sha256:d09d92c0a310e3057a3c54df387b99abf2bf31352218dbe1adcb00e807886488
+  - name: ghcr.io/kedacore/keda-metrics-apiserver
+    newName: 127.0.0.1:30500/kedacore/keda-metrics-apiserver
+    digest: sha256:747e376b3e80dc4f72bf4f7043f47cc4cdb56f34b1aed9531789f474996e1c84
+  - name: ghcr.io/kedacore/keda-admission-webhooks
+    newName: 127.0.0.1:30500/kedacore/keda-admission-webhooks
+    digest: sha256:5f4b0b0f7831b9f53738be85e99449a1747a5effa970305fe602455ab0f4fcd3
+  - name: ghcr.io/kedacore/http-add-on-operator
+    newName: 127.0.0.1:30500/kedacore/http-add-on-operator
+    digest: sha256:2ae0076d549fb7d12b3d9ecb1e87d035c7ee73e94a640ff53842e70ab0824da0
+  - name: ghcr.io/kedacore/http-add-on-interceptor
+    newName: 127.0.0.1:30500/kedacore/http-add-on-interceptor
+    digest: sha256:3a9a454b949edd5dee711ed14e603cc3b91b7c065905ecc251fe0a56a4c026f1
+  - name: ghcr.io/kedacore/http-add-on-scaler
+    newName: 127.0.0.1:30500/kedacore/http-add-on-scaler
+    digest: sha256:db5223b1a37521ec0f099ac04785bfc069f5c3ebf4bacffd04e5127b0876dffb
+patches:
+  # CIS 5.1.6: no ServiceAccount automounts a token; every component calls
+  # the API with an explicitly projected one (patches/token-*.yaml).
+  - target:
+      kind: ServiceAccount
+    patch: |-
+      apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        name: any
+      automountServiceAccountToken: false
+  - path: patches/token-keda-operator.yaml
+  - path: patches/token-keda-metrics-apiserver.yaml
+  - path: patches/token-keda-admission.yaml
+  - path: patches/token-keda-add-ons-http-operator.yaml
+  - path: patches/token-keda-add-ons-http-interceptor.yaml
+  - path: patches/token-keda-add-ons-http-scaler.yaml
+  # One node: one interceptor (the release lets it scale to 50).
+  - target:
+      kind: ScaledObject
+      name: keda-add-ons-http-interceptor
+    patch: |-
+      - op: replace
+        path: /spec/maxReplicaCount
+        value: 1

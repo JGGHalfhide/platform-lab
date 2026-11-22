@@ -160,3 +160,14 @@ vulnerabilities:
       HIGH, Go stdlib v1.24.6 in gosu (postgres image, sample app). gosu only
       runs when the container starts as root; the pod runs as UID 70 and root
       is rejected by the restricted Pod Security level and Kyverno. Added 11/16.
+  - id: CVE-2026-77524
+    paths: ["ko-app/operator", "ko-app/interceptor", "ko-app/scaler"]
+    statement: >-
+      CRITICAL, github.com/kedacore/keda/v2 v2.18.3 as a Go library in the KEDA
+      HTTP add-on v0.16.0 images (local-airgap-LLM scale to zero). The flaw is
+      in the KEDA operator's HashiCorp Vault auth for TriggerAuthentications
+      (pkg/scaling/resolver). The add-on binaries link only apis/keda/v1alpha1,
+      pkg/scalers/externalscaler and pkg/metricscollector/webhook; checked
+      11/22 with `strings`: 0 references to pkg/scaling/resolver or Vault.
+      KEDA core runs 2.21.1 (fixed). Remove when an add-on release ships
+      KEDA >= 2.21 (upstream main has 2.21.0 since 11/2). Added 11/22.

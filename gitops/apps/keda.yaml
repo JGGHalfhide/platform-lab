@@ -1,0 +1,26 @@
+# KEDA v2.21.1 + HTTP add-on v0.16.0 (gitops/keda): event-driven autoscaling,
+# including HTTP scale to zero for local-airgap-LLM's inference server.
+# Images from the platform registry (`make image`); empty after a rebuild.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: keda
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/JGGHalfhide/platform-lab.git
+    targetRevision: main
+    path: gitops/keda
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: keda
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      # KEDA's CRDs exceed the client-side apply annotation size limit.
+      - ServerSideApply=true
+      # The interceptor's ScaledObject before KEDA's CRDs exist.
+      - SkipDryRunOnMissingResource=true

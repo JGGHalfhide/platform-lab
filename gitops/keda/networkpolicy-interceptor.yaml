@@ -1,0 +1,45 @@
+# The interceptor proxy is the entry point to scaled-to-zero HTTP backends,
+# so it gets the clients' allow-list (local-airgap-LLM: pods and namespaces
+# labelled inference.local-airgap-llm/client=true). Its admin port is for
+# the HTTP add-on scaler, metrics for Prometheus. Other KEDA pods are not
+# selected and keep the cluster default.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: interceptor
+  namespace: keda
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: http
+      app.kubernetes.io/instance: interceptor
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              inference.local-airgap-llm/client: "true"
+          podSelector:
+            matchLabels:
+              inference.local-airgap-llm/client: "true"
+      ports:
+        - protocol: TCP
+          port: 8080
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: http
+              app.kubernetes.io/instance: external-scaler
+      ports:
+        - protocol: TCP
+          port: 9090
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+      ports:
+        - protocol: TCP
+          port: 2223
