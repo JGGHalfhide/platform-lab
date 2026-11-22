@@ -46,9 +46,9 @@ variable "vcpus" {
 }
 
 variable "memory_mib" {
-  description = "Memory in MiB."
+  description = "Memory in MiB (16 GiB for the platform plus a 32k-context inference pod, local-airgap-LLM docs/resource-plan.md). With the rehearsal VM at 16 GiB too, the two exceed the host's 28 GiB: run one at a time."
   type        = number
-  default     = 12288
+  default     = 16384
 }
 
 variable "disk_size_gib" {
@@ -99,9 +99,9 @@ variable "rehearsal_vcpus" {
 }
 
 variable "rehearsal_memory_mib" {
-  description = "Memory in MiB for the rehearsal VM; sized for the platform plus a ~5 GiB inference pod (local-airgap-LLM docs/resource-plan.md)."
+  description = "Memory in MiB for the rehearsal VM; same size as the build node, for the platform plus a 32k-context inference pod (local-airgap-LLM docs/resource-plan.md). Do not run it together with the build node."
   type        = number
-  default     = 12288
+  default     = 16384
 }
 
 variable "rehearsal_disk_size_gib" {
