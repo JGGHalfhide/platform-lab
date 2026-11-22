@@ -35,6 +35,7 @@ Images published so far:
 | `stefanprodan/podinfo:6.17.0` (sample app, Week 6) | 123 | 0 / 3 | yes |
 | `library/postgres:17.12-alpine3.24` (sample app, Week 6) | 51 | 0 / 0 after the `gosu` exception (26 suppressed) | yes |
 | `ggml-org/llama.cpp:server-v1.0.0-b12359-b1b770d` (ghcr.io; local-airgap-LLM inference runtime, 11/21) | 388 | 0 / 0 | yes |
+| `models/qwen3.5-4b-q4km:hf-8d43d974efc4` (local-airgap-LLM model as an image volume, 11/22; published with its `make model`, SLSA provenance attestation instead of an SBOM) | - (one data file) | - | yes |
 
 ### Scan exceptions
 
