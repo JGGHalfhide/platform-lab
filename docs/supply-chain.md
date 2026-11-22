@@ -97,3 +97,13 @@ Full output: `docs/scans/week4-admission-test.txt`.
 | Unsigned image (`SIGN=0`) | rejected | image is not signed with the platform-lab cosign key (pki/cosign.pub); publish it with `make image` |
 | Signed image referenced by tag only | rejected | images from the platform registry must be pinned by digest |
 | Deployment with the unsigned image | rejected at the Deployment | same as unsigned |
+
+Image volumes (11/22, after the policy change in 250acd1; full output:
+`docs/scans/image-volume-admission-test.txt`):
+
+| Case | Result | Message |
+|---|---|---|
+| Signed image volume, pinned by digest | admitted, mounted read-only at `/vol` | |
+| Unsigned image volume | rejected | image is not signed with the platform-lab cosign key |
+| Image volume referenced by tag only | rejected | must be pinned by digest |
+| Image volume from Docker Hub | rejected | `restrict-image-registries`: images must come from a trusted registry |

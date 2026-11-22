@@ -1,0 +1,33 @@
+# Image volume admission test, 2026-11-22T03:57:13Z
+# platform-lab 250acd1, Kyverno v1.19.2, v1.36.5+rke2r1 containerd://2.3.4-k3s1
+# Namespace imgvol-test, Pod Security enforce=restricted. Container: signed busybox 1.37.0 by digest.
+namespace/imgvol-test created
+
+## signed-vol: reference: 127.0.0.1:30500/library/alpine@sha256:49340b346798875b5592e5d420241f2f9cfba5f47e62ebb1446a1b34734e898f
+pod/signed-vol created
+
+## unsigned-vol: reference: 127.0.0.1:30500/library/busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
+Error from server: error when creating "unsigned-vol.yaml": admission webhook "ivpol.validate.kyverno.svc-fail" denied the request: Policy verify-platform-images failed: image is not signed with the platform-lab cosign key (pki/cosign.pub); publish it with `make image`
+
+## tag-vol: reference: 127.0.0.1:30500/library/alpine:3.22
+Error from server: error when creating "tag-vol.yaml": admission webhook "ivpol.validate.kyverno.svc-fail" denied the request: Policy verify-platform-images failed: images from the platform registry must be pinned by digest (127.0.0.1:30500/<repo>@sha256:...)
+
+## dockerhub-vol: reference: docker.io/library/alpine@sha256:49340b346798875b5592e5d420241f2f9cfba5f47e62ebb1446a1b34734e898f
+Error from server: error when creating "dockerhub-vol.yaml": admission webhook "vpol.validate.kyverno.svc-fail" denied the request: Policy restrict-image-registries failed: images must come from a trusted registry (127.0.0.1:30500/, 127.0.0.1:31999/): docker.io/library/alpine@sha256:49340b346798875b5592e5d420241f2f9cfba5f47e62ebb1446a1b34734e898f
+
+## signed-vol status and contents of the image volume (/vol)
+NAME         READY   STATUS    RESTARTS   AGE   IP            NODE            NOMINATED NO
+signed-vol   1/1     Running   0          2s    10.42.0.130   build-node-01   <none>
+bin
+dev
+etc
+home
+lib
+media
+mnt
+opt
+proc
+root
+overlay on /vol type overlay (ro,seclabel,relatime,lowerdir=/var/lib/rancher/rke2/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/523/fs,upperdir=/var/lib/rancher/rke2/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/626/fs,workdir=/var/lib/rancher/rke2/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/626/work,uuid=on,volatile)
+touch: /vol/x: Read-only file system
+command terminated with exit code 1
