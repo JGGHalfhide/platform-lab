@@ -208,7 +208,25 @@ A package counts as deployed only when every component in its Zarf record
 (`zarf/zarf-package-<name>` Secret) has status `Succeeded` and its aggregate
 checksum matches the copied file. Zarf lists a failed deploy at its version
 anyway, and a rebuilt package redeploys without a version bump. A second run
-reports `changed=0`.
+reports `changed=0`. Only a missing record counts as "not deployed": any
+other error reading one stops the run (11/23: an API server still settling
+after a boot made a failed read look like "init not deployed", and the role
+re-ran `zarf init`).
+
+**After a boot, let the cluster settle before deploying.** etcd and the API
+server restart a few times while RKE2 comes up, and KEDA's operator with
+them; local-airgap-LLM waits until etcd and kube-apiserver have gone
+2 minutes without a restart.
+
+**`zarf init` cannot be re-run once the policies are deployed (open,
+11/23).** The Zarf injector bootstraps the registry by cloning a pod already
+on the node (an RKE2 system image from docker.io), and
+`restrict-image-registries` denies it. On a fresh cluster init runs before
+the policies, so it works; an interrupted init, or a later Zarf upgrade,
+fails at admission. Today the fix is a fresh VM (`terraform destroy
+-target=module.airgap_rehearsal`, `make rehearsal`, then section 3 on). A
+PolicyException scoped to the injector pod would allow a re-init, at the
+cost of loosening a policy: not decided.
 
 ### Policies on the airgapped cluster
 

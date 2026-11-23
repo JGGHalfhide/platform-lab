@@ -187,6 +187,16 @@ Reminders for Week 8 (in ROADMAP.md): circle back to the deferred Week 4 GitHub 
 workflow; remind the user about docs/stack.md (full tech stack spec with each tool's use
 and rationale, end-to-end workflow breakdown, Mermaid diagram).
 Post 1 (hardening results) is the user's to write.
+After v1.0, for local-airgap-LLM (Phase 2, 11/21-11/23; its CLAUDE.md and docs have the details):
+build VM 8 vCPU (b293cda), both VMs 16 GiB, run one at a time (38337fd); verify-platform-images
+covers image volumes (250acd1); Argo CD Application local-airgap-llm (5ecef14); KEDA 2.21.1 + HTTP
+add-on 0.16.0 in gitops/keda, six images signed, add-on CVE-2026-77524 Trivy exception to remove when
+fixed (578f372); inotify limits raised (3db5f3c); zarf/keda package and image volumes in the airgap
+policy (8a23657). 11/23 full rebuild from fresh clones: quickstart images by tag@digest (postgres tag
+had moved), registry_env_cleanup exit status (e57978f); zarf role stops on unreadable package records,
+and `zarf init` cannot be re-run once the Kyverno policies are deployed (injector denied by
+restrict-image-registries; open question in ROADMAP, docs/airgap-runbook.md section 5). After a VM
+boot, let etcd/kube-apiserver settle before deploying.
 See ROADMAP.md for the checklist.
 Note: in Claude Code sessions run ansible with `</dev/null` (non-blocking IO error otherwise).
 Note: zarf on the airgap node is /opt/zarf/zarf (not on sudo's secure_path).

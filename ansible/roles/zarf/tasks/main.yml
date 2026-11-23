@@ -71,7 +71,10 @@
   loop: "{{ ['init'] + (zarf_all_packages | map(attribute='name') | list) }}"
   register: zarf_records
   changed_when: false
-  failed_when: false
+  # Only a missing record means "not deployed". Any other error (e.g. the
+  # API server still settling after a boot) must stop the run: read as "not
+  # deployed", it re-ran `zarf init` against an unstable API (11/23).
+  failed_when: zarf_records.rc != 0 and 'NotFound' not in zarf_records.stderr
 
 - name: Record the fully deployed packages and versions
   ansible.builtin.set_fact:

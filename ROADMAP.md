@@ -310,6 +310,8 @@ Decide these before the week that depends on them.
 - **STIG V-242415, Secrets in env vars. Fixed 11/16 (user's call: before tagging v0.5).** Argo CD reads the Redis password from the mounted Secret (`REDIS_CREDS_DIR_PATH`, supported in 3.6.1), Redis builds its `requirepass` config on an in-memory emptyDir at startup (the password was also on its command line), files 0440 with `fsGroup: 999`. New Enforce policy `disallow-secret-env`. Gotcha: removing a field from `gitops/argocd/` on a running cluster needs `make argocd` again, because the bootstrap `kubectl apply --server-side` still owns the field and Argo CD's server-side apply cannot remove it (a fresh build is unaffected).
 - **Zarf and Kyverno image verification (Week 6). Resolved 11/16 (rehearsal).** Signed images keep their signatures through Zarf once the `.sig`/`.att` tags are listed in the package (`zarf package create` does not add them). Kyverno also checks Deployments as written in Git (`127.0.0.1:30500`), so the airgap variant of `verify-platform-images` (zarf/policies) maps both `127.0.0.1:30500` and `127.0.0.1:31999` to the Zarf registry Service with a pull Secret. Upstream platform images rewritten by Zarf get a scoped PolicyException; see docs/airgap-runbook.md.
 
+- **Re-running `zarf init` under the policies (open, 11/23).** Kyverno's `restrict-image-registries` denies the Zarf injector (it clones an RKE2 system pod from docker.io), so an interrupted init or a Zarf upgrade on the airgapped cluster fails at admission; a fresh VM works because init runs before the policies. Options: a PolicyException scoped to the injector pod in `zarf`, or keep "upgrade = rebuild the VM". See docs/airgap-runbook.md section 5.
+
 ---
 
 ## After Week 8: next projects
