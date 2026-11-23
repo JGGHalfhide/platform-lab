@@ -225,8 +225,9 @@ on the node (an RKE2 system image from docker.io), and
 the policies, so it works; an interrupted init, or a later Zarf upgrade,
 fails at admission. Today the fix is a fresh VM (`terraform destroy
 -target=module.airgap_rehearsal`, `make rehearsal`, then section 3 on). A
-PolicyException scoped to the injector pod would allow a re-init, at the
-cost of loosening a policy: not decided.
+PolicyException scoped to the injector pod, created only while init runs,
+will allow a re-init: decided 11/23, planned in ROADMAP open questions
+(not built yet).
 
 ### Policies on the airgapped cluster
 
