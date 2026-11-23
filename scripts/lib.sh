@@ -33,7 +33,10 @@ registry_env() {
 }
 
 registry_env_cleanup() {
-  [[ -n "${_registry_tmp:-}" ]] && rm -rf "$_registry_tmp"
+  # An if, not `[[ ]] && rm`: with nothing to remove (registry_env never
+  # ran), the && form returns 1 and an EXIT trap turns that into the
+  # script's exit status.
+  if [[ -n "${_registry_tmp:-}" ]]; then rm -rf "$_registry_tmp"; fi
 }
 
 # Map an upstream reference to its path in the in-cluster registry, keeping

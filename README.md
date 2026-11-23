@@ -171,10 +171,18 @@ In a fork, also:
 make up           # host setup, VM, Ansible (base, hardening, OpenSCAP, RKE2, secrets), Argo CD
 make verify       # kubectl get nodes against ./kubeconfig
 
-# The registry starts empty: publish the images the manifests pin.
-make image IMAGE=docker.io/stefanprodan/podinfo:6.17.0
-make image IMAGE=docker.io/library/postgres:17.12-alpine3.24
-make image IMAGE=docker.io/velero/velero:v1.18.4
+# The registry starts empty: publish the images the manifests pin, by
+# tag@digest (a tag alone can move upstream: postgres had by 11/23).
+make image IMAGE=docker.io/stefanprodan/podinfo:6.17.0@sha256:fa2f27c1a8561097e5144bfc0853eba6054d743b68b03de4cad4675616ddefb0
+make image IMAGE=docker.io/library/postgres:17.12-alpine3.24@sha256:a77aa70e641402a21411b92b721c58d10f23b50ae5fdd2333efd22d166e1e5f7
+make image IMAGE=docker.io/velero/velero:v1.18.4@sha256:c89fb5b6d1fd6afd368e0f483e6f5555fd62851a1eada8ac5c72482e674ca17b
+# KEDA and its HTTP add-on (gitops/keda)
+make image IMAGE=ghcr.io/kedacore/keda:2.21.1@sha256:d09d92c0a310e3057a3c54df387b99abf2bf31352218dbe1adcb00e807886488
+make image IMAGE=ghcr.io/kedacore/keda-metrics-apiserver:2.21.1@sha256:747e376b3e80dc4f72bf4f7043f47cc4cdb56f34b1aed9531789f474996e1c84
+make image IMAGE=ghcr.io/kedacore/keda-admission-webhooks:2.21.1@sha256:5f4b0b0f7831b9f53738be85e99449a1747a5effa970305fe602455ab0f4fcd3
+make image IMAGE=ghcr.io/kedacore/http-add-on-operator:0.16.0@sha256:2ae0076d549fb7d12b3d9ecb1e87d035c7ee73e94a640ff53842e70ab0824da0
+make image IMAGE=ghcr.io/kedacore/http-add-on-interceptor:0.16.0@sha256:3a9a454b949edd5dee711ed14e603cc3b91b7c065905ecc251fe0a56a4c026f1
+make image IMAGE=ghcr.io/kedacore/http-add-on-scaler:0.16.0@sha256:db5223b1a37521ec0f099ac04785bfc069f5c3ebf4bacffd04e5127b0876dffb
 
 make policy-test                      # Kyverno policy tests, offline
 make stig-scan NAME=my-scan           # OpenSCAP STIG scan -> docs/scans/my-scan.*
