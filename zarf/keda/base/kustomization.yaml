@@ -1,0 +1,16 @@
+# gitops/keda without the interceptor's ScaledObject: Zarf installs manifests
+# as a Helm release, and Helm rejects a release whose custom resources have no
+# CRD yet (Argo CD needs SkipDryRunOnMissingResource for the same reason).
+# The ScaledObject is deployed next, by ../interceptor-scaling.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../../gitops/keda
+patches:
+  - patch: |-
+      $patch: delete
+      apiVersion: keda.sh/v1alpha1
+      kind: ScaledObject
+      metadata:
+        name: keda-add-ons-http-interceptor
+        namespace: keda

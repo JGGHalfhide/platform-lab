@@ -347,3 +347,14 @@ egress blocked and no image pull errors.
   minutes for the large packages; `zarf package deploy --verify=always`
   still checks every signature.
 
+- **local-airgap-LLM (11/22, Week 5 there):** package `zarf/keda` (KEDA
+  2.21.1 + HTTP add-on 0.16.0 from `gitops/keda`; the interceptor's
+  ScaledObject is a second component because Helm rejects a custom resource
+  in the same release as its CRD). The airgap variant of
+  `verify-platform-images` now includes image volumes: it had rebuilt the
+  image list from containers only, so an unsigned model image would have
+  been admitted (policies 0.7.0). The zarf role takes
+  `zarf_extra_packages` (packages built in another repo, same signature
+  check) and creates a 20Gi registry volume (was 10Gi) for the model.
+  `scripts/airgap-packages.sh` builds another repo's packages through
+  `ZARF_SRC`. Results: local-airgap-LLM `docs/airgap-runbook.md`.

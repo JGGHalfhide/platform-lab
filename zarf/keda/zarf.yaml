@@ -1,0 +1,68 @@
+# KEDA and the HTTP add-on for the airgapped cluster: the same manifests as
+# the build cluster (gitops/keda: pinned release manifests plus patches).
+# Used by local-airgap-LLM to scale its inference server to zero and back.
+# The six images come from the build cluster's registry with their cosign
+# signatures (.sig) and SBOM attestations (.att), as in zarf/sample-app, so
+# Kyverno verifies them after the Zarf agent rewrites them to its registry.
+# Deploy after policies, before local-airgap-LLM's llm package (its
+# ScaledObject and InterceptorRoute need these CRDs).
+kind: ZarfPackageConfig
+metadata:
+  name: keda
+  description: KEDA 2.21.1 and the KEDA HTTP add-on 0.16.0
+  version: 0.8.0
+  architecture: amd64
+
+components:
+  - name: keda
+    required: true
+    manifests:
+      - name: keda
+        kustomizations:
+          - base
+    # Pinned by the digests in gitops/keda/kustomization.yaml (signed by
+    # `make image`).
+    images:
+      - registry.platform-lab.internal/kedacore/keda@sha256:d09d92c0a310e3057a3c54df387b99abf2bf31352218dbe1adcb00e807886488
+      - registry.platform-lab.internal/kedacore/keda:sha256-d09d92c0a310e3057a3c54df387b99abf2bf31352218dbe1adcb00e807886488.sig
+      - registry.platform-lab.internal/kedacore/keda:sha256-d09d92c0a310e3057a3c54df387b99abf2bf31352218dbe1adcb00e807886488.att
+      - registry.platform-lab.internal/kedacore/keda-metrics-apiserver@sha256:747e376b3e80dc4f72bf4f7043f47cc4cdb56f34b1aed9531789f474996e1c84
+      - registry.platform-lab.internal/kedacore/keda-metrics-apiserver:sha256-747e376b3e80dc4f72bf4f7043f47cc4cdb56f34b1aed9531789f474996e1c84.sig
+      - registry.platform-lab.internal/kedacore/keda-metrics-apiserver:sha256-747e376b3e80dc4f72bf4f7043f47cc4cdb56f34b1aed9531789f474996e1c84.att
+      - registry.platform-lab.internal/kedacore/keda-admission-webhooks@sha256:5f4b0b0f7831b9f53738be85e99449a1747a5effa970305fe602455ab0f4fcd3
+      - registry.platform-lab.internal/kedacore/keda-admission-webhooks:sha256-5f4b0b0f7831b9f53738be85e99449a1747a5effa970305fe602455ab0f4fcd3.sig
+      - registry.platform-lab.internal/kedacore/keda-admission-webhooks:sha256-5f4b0b0f7831b9f53738be85e99449a1747a5effa970305fe602455ab0f4fcd3.att
+      - registry.platform-lab.internal/kedacore/http-add-on-operator@sha256:2ae0076d549fb7d12b3d9ecb1e87d035c7ee73e94a640ff53842e70ab0824da0
+      - registry.platform-lab.internal/kedacore/http-add-on-operator:sha256-2ae0076d549fb7d12b3d9ecb1e87d035c7ee73e94a640ff53842e70ab0824da0.sig
+      - registry.platform-lab.internal/kedacore/http-add-on-operator:sha256-2ae0076d549fb7d12b3d9ecb1e87d035c7ee73e94a640ff53842e70ab0824da0.att
+      - registry.platform-lab.internal/kedacore/http-add-on-interceptor@sha256:3a9a454b949edd5dee711ed14e603cc3b91b7c065905ecc251fe0a56a4c026f1
+      - registry.platform-lab.internal/kedacore/http-add-on-interceptor:sha256-3a9a454b949edd5dee711ed14e603cc3b91b7c065905ecc251fe0a56a4c026f1.sig
+      - registry.platform-lab.internal/kedacore/http-add-on-interceptor:sha256-3a9a454b949edd5dee711ed14e603cc3b91b7c065905ecc251fe0a56a4c026f1.att
+      - registry.platform-lab.internal/kedacore/http-add-on-scaler@sha256:db5223b1a37521ec0f099ac04785bfc069f5c3ebf4bacffd04e5127b0876dffb
+      - registry.platform-lab.internal/kedacore/http-add-on-scaler:sha256-db5223b1a37521ec0f099ac04785bfc069f5c3ebf4bacffd04e5127b0876dffb.sig
+      - registry.platform-lab.internal/kedacore/http-add-on-scaler:sha256-db5223b1a37521ec0f099ac04785bfc069f5c3ebf4bacffd04e5127b0876dffb.att
+    actions:
+      onDeploy:
+        after:
+          - description: KEDA operator ready
+            wait:
+              cluster:
+                kind: Deployment
+                name: keda-operator
+                namespace: keda
+                condition: Available
+          - description: HTTP add-on interceptor ready
+            wait:
+              cluster:
+                kind: Deployment
+                name: keda-add-ons-http-interceptor
+                namespace: keda
+                condition: Available
+
+  # Needs the ScaledObject CRD from the first component (zarf/keda/base).
+  - name: keda-interceptor-scaling
+    required: true
+    manifests:
+      - name: keda-interceptor-scaling
+        kustomizations:
+          - interceptor-scaling

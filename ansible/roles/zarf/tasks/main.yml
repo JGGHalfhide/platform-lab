@@ -41,14 +41,18 @@
     group: root
     mode: "0644"
 
+- name: List the packages to deploy
+  ansible.builtin.set_fact:
+    zarf_all_packages: "{{ zarf_packages + zarf_extra_packages }}"
+
 - name: Copy the signed packages
   ansible.builtin.copy:
-    src: "{{ zarf_artifacts_dir }}/packages/zarf-package-{{ item.name }}-amd64-{{ item.version }}.tar.zst"
+    src: "{{ item.dir | default(zarf_artifacts_dir ~ '/packages') }}/zarf-package-{{ item.name }}-amd64-{{ item.version }}.tar.zst"
     dest: "{{ zarf_dir }}/packages/"
     owner: root
     group: root
     mode: "0600"
-  loop: "{{ zarf_packages }}"
+  loop: "{{ zarf_all_packages }}"
   loop_control:
     label: "{{ item.name }} {{ item.version }}"
 
@@ -64,7 +68,7 @@
     cmd: >-
       {{ zarf_kubectl }} -n zarf get secret zarf-package-{{ item }}
       -o jsonpath={.data.data}
-  loop: "{{ ['init'] + (zarf_packages | map(attribute='name') | list) }}"
+  loop: "{{ ['init'] + (zarf_all_packages | map(attribute='name') | list) }}"
   register: zarf_records
   changed_when: false
   failed_when: false
@@ -98,9 +102,9 @@
   ansible.builtin.command:  # noqa: command-instead-of-module
     cmd: >-
       tar -I zstd -xOf
-      {{ zarf_artifacts_dir }}/packages/zarf-package-{{ item.name }}-amd64-{{ item.version }}.tar.zst
+      {{ item.dir | default(zarf_artifacts_dir ~ '/packages') }}/zarf-package-{{ item.name }}-amd64-{{ item.version }}.tar.zst
       zarf.yaml
-  loop: "{{ zarf_packages }}"
+  loop: "{{ zarf_all_packages }}"
   loop_control:
     label: "{{ item.name }} {{ item.version }}"
   register: zarf_definitions
@@ -195,7 +199,7 @@
       --key {{ zarf_dir }}/cosign.pub --verify=always --take-ownership --confirm --no-color
   environment:
     KUBECONFIG: "{{ zarf_kubeconfig }}"
-  loop: "{{ zarf_packages }}"
+  loop: "{{ zarf_all_packages }}"
   loop_control:
     label: "{{ item.name }} {{ item.version }}"
   when: zarf_deployed.get(item.name) != zarf_checksums[item.name]

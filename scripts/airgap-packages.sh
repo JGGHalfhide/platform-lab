@@ -3,9 +3,11 @@
 #
 #   scripts/airgap-packages.sh [package...]     (or: make airgap-packages)
 #
-# Packages (zarf/<name>/zarf.yaml): platform, policies, sample-app, monitoring
-# by default.
+# Packages (zarf/<name>/zarf.yaml): platform, policies, sample-app, monitoring,
+# keda by default.
 # Output: build/airgap/packages/zarf-package-<name>-amd64-<version>.tar.zst.
+# Another repo builds its own packages with the same signing by setting
+# ZARF_SRC (its zarf/ directory) and OUT (local-airgap-LLM: make airgap-packages).
 #
 # - Images are pulled from upstream registries and, for the sample app, from
 #   the build cluster's registry over TLS (lab CA via registry_env), so that
@@ -19,9 +21,10 @@ set -euo pipefail
 source "$(dirname "$0")/lib.sh"
 
 OUT="${OUT:-$REPO_ROOT/build/airgap/packages}"
+ZARF_SRC="${ZARF_SRC:-$REPO_ROOT/zarf}"
 COSIGN_KEY="${COSIGN_KEY:-$HOME/.config/platform-lab/cosign.key}"
 packages=("$@")
-[[ ${#packages[@]} -gt 0 ]] || packages=(platform policies sample-app monitoring)
+[[ ${#packages[@]} -gt 0 ]] || packages=(platform policies sample-app monitoring keda)
 
 mkdir -p "$OUT" "$REPO_ROOT/build/logs"
 trap registry_env_cleanup EXIT
@@ -30,10 +33,10 @@ COSIGN_PASSWORD="$(vault_get vault_cosign_password)"
 export COSIGN_PASSWORD
 
 for p in "${packages[@]}"; do
-  echo "==> zarf/$p"
+  echo "==> $ZARF_SRC/$p"
   start=$(date +%s)
   log="$REPO_ROOT/build/logs/zarf-create-$p.log"
-  if ! zarf package create "$REPO_ROOT/zarf/$p" --output "$OUT" \
+  if ! zarf package create "$ZARF_SRC/$p" --output "$OUT" \
       --signing-key "$COSIGN_KEY" --confirm --no-color >"$log" 2>&1; then
     tail -20 "$log" >&2
     echo "zarf package create failed for $p (log: $log)" >&2

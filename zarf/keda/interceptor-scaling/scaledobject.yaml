@@ -1,0 +1,26 @@
+# The HTTP add-on interceptor's ScaledObject, as gitops/keda renders it
+# (release manifest plus the maxReplicaCount patch), deployed after the CRDs
+# exist (see ../base). Keep in sync with gitops/keda when either changes:
+#   kubectl kustomize gitops/keda   (the ScaledObject)
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  labels:
+    app.kubernetes.io/component: interceptor
+    app.kubernetes.io/name: http-add-on
+    app.kubernetes.io/part-of: keda
+  name: keda-add-ons-http-interceptor
+  namespace: keda
+spec:
+  maxReplicaCount: 1
+  minReplicaCount: 1
+  pollingInterval: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: keda-add-ons-http-interceptor
+  triggers:
+  - metadata:
+      interceptorTargetPendingRequests: '200'
+      scalerAddress: keda-add-ons-http-external-scaler:9090
+    type: external

@@ -3,7 +3,9 @@
 # - Pods carry 127.0.0.1:31999/... (rewritten by the Zarf agent), while
 #   Deployments and other controllers keep 127.0.0.1:30500/... from Git. Zarf
 #   pushed the same repository paths, signatures included, so both prefixes
-#   are looked up in the Zarf registry through its Service.
+#   are looked up in the Zarf registry through its Service. Image volumes
+#   (local-airgap-LLM's model) are included, as in gitops/policies; the Zarf
+#   agent rewrites them too.
 # - The Zarf registry requires a login for pulls: Kyverno uses the
 #   zarf-registry-pull Secret (kyverno namespace), created by the zarf Ansible
 #   role from the zarf-state Secret. Plain HTTP inside the cluster, as on the
@@ -23,10 +25,12 @@ patches:
       - op: replace
         path: /spec/images/0/expression
         value: >-
-          (object.spec.containers
+          ((object.spec.containers
           + (has(object.spec.initContainers) ? object.spec.initContainers : [])
           + (has(object.spec.ephemeralContainers) ? object.spec.ephemeralContainers : []))
           .map(c, c.image)
+          + (has(object.spec.volumes) ? object.spec.volumes : [])
+          .filter(v, has(v.image)).map(v, v.image.reference))
           .filter(i, i.startsWith('127.0.0.1:30500/') || i.startsWith('127.0.0.1:31999/'))
           .map(i, 'zarf-docker-registry.zarf.svc.cluster.local:5000/' + i.substring(16))
       - op: replace
