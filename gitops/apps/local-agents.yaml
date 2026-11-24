@@ -1,0 +1,24 @@
+# Agents from the local-agents repo (its deploy/ directory): the read-only
+# status reporter (ADR 0003 there), its ServiceAccount and read-only
+# ClusterRole, NetworkPolicies, in the agents namespace. The agent image
+# (`make agent-image` there, published with `make image
+# IMAGE=oci-layout:<dir> NAME=local-agents/agent:<tag>`) must be in the
+# platform registry first.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: local-agents
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/JGGHalfhide/local-agents.git
+    targetRevision: main
+    path: deploy
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: agents
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
