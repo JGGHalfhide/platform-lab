@@ -53,7 +53,15 @@ resource "libvirt_domain" "node" {
   vcpu        = var.vcpus
   memory      = var.memory_mib
   memory_unit = "MiB"
-  running     = true
+  # Started when created; after that Terraform leaves the power state alone
+  # (lifecycle below), so an apply never starts a second 20 GiB VM on the
+  # ~28 GiB host. Power the VMs with scripts/vm-power.sh (make vm-start /
+  # vm-stop), which runs them one at a time.
+  running = true
+
+  lifecycle {
+    ignore_changes = [running]
+  }
 
   # The 0.9 provider emits no <features> by default, which starts q35 with
   # acpi=off; the guest then can't enumerate its PCIe devices and never boots.
