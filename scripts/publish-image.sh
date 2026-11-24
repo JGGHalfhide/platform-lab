@@ -3,6 +3,12 @@
 # in-cluster registry over TLS.
 #
 #   scripts/publish-image.sh <image-ref>      (or: make image IMAGE=<image-ref>)
+#   scripts/publish-image.sh oci-layout:<dir> <repo>:<tag>
+#                                             (or: make image IMAGE=oci-layout:<dir> NAME=<repo>:<tag>)
+#
+# The second form publishes an image built locally (e.g. local-agents'
+# scripts/build-agent-image.sh, crane, no daemon): step 1 is skipped and the
+# digest is the layout's (index.json, one manifest); steps 2-5 are the same.
 #
 # 1. Resolve the reference to a digest and pull the whole index (all platforms)
 #    as an OCI layout, so the pushed digest equals the upstream one.
@@ -33,37 +39,57 @@ SIGN="${SIGN:-1}"
 PUSH="${PUSH:-1}"
 COSIGN_KEY="${COSIGN_KEY:-$HOME/.config/platform-lab/cosign.key}"
 
-src="${1:?usage: $0 <image-ref>}"
-repo="$(registry_repo "$src")"
-
-# Tag: the source tag, or the digest-derived one if pulling by digest only.
-ref_nodigest="${src%%@*}"
-if [[ "${ref_nodigest##*:}" != */* && "$ref_nodigest" == *:* ]]; then
-  tag="${ref_nodigest##*:}"
+src="${1:?usage: $0 <image-ref> | oci-layout:<dir> <repo>:<tag>}"
+layout=""
+if [[ "$src" == oci-layout:* ]]; then
+  layout="${src#oci-layout:}"
+  name="${2:?usage: $0 oci-layout:<dir> <repo>:<tag>}"
+  [[ "$name" == *:* && "$name" != *@* ]] || { echo "name must be <repo>:<tag>" >&2; exit 1; }
+  repo="${name%:*}"
+  tag="${name##*:}"
 else
-  tag=""
+  repo="$(registry_repo "$src")"
+  # Tag: the source tag, or the digest-derived one if pulling by digest only.
+  ref_nodigest="${src%%@*}"
+  if [[ "${ref_nodigest##*:}" != */* && "$ref_nodigest" == *:* ]]; then
+    tag="${ref_nodigest##*:}"
+  else
+    tag=""
+  fi
 fi
 
-echo "==> Resolving $src"
-digest="$(crane digest "$src")"
-if [[ "$src" == *@* && "${src#*@}" != "$digest" ]]; then
-  echo "Digest mismatch: asked for ${src#*@}, registry returned $digest" >&2
-  exit 1
-fi
-[[ -n "$tag" ]] || tag="sha256-${digest#sha256:}"
-pinned="${src%%@*}@$digest"
-echo "    $pinned"
-
-out="$REPO_ROOT/build/images/$repo/${digest#sha256:}"
-mkdir -p "$out"
-oci="$out/oci"
-
-if [[ -f "$oci/index.json" ]]; then
-  echo "==> Using cached OCI layout $oci"
-else
-  echo "==> Pulling all platforms"
+if [[ -n "$layout" ]]; then
+  echo "==> Local OCI layout $layout"
+  digest="$(python3 -c 'import json,sys; m=json.load(open(sys.argv[1]))["manifests"]; assert len(m)==1, "layout must hold one manifest"; print(m[0]["digest"])' "$layout/index.json")"
+  pinned="oci-layout:$layout@$digest"
+  echo "    $repo:$tag@$digest"
+  out="$REPO_ROOT/build/images/$repo/${digest#sha256:}"
+  mkdir -p "$out"
+  oci="$out/oci"
   rm -rf "$oci"
-  crane pull --format=oci --platform=all "$pinned" "$oci"
+  cp -r "$layout" "$oci"
+else
+  echo "==> Resolving $src"
+  digest="$(crane digest "$src")"
+  if [[ "$src" == *@* && "${src#*@}" != "$digest" ]]; then
+    echo "Digest mismatch: asked for ${src#*@}, registry returned $digest" >&2
+    exit 1
+  fi
+  [[ -n "$tag" ]] || tag="sha256-${digest#sha256:}"
+  pinned="${src%%@*}@$digest"
+  echo "    $pinned"
+
+  out="$REPO_ROOT/build/images/$repo/${digest#sha256:}"
+  mkdir -p "$out"
+  oci="$out/oci"
+
+  if [[ -f "$oci/index.json" ]]; then
+    echo "==> Using cached OCI layout $oci"
+  else
+    echo "==> Pulling all platforms"
+    rm -rf "$oci"
+    crane pull --format=oci --platform=all "$pinned" "$oci"
+  fi
 fi
 
 echo "==> SBOM (syft, $SCAN_PLATFORM)"

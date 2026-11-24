@@ -15,6 +15,11 @@ SBOM, and is signed; Kyverno rejects unsigned images at admission.
 | Push | crane | Over TLS to `registry.platform-lab.internal` (lab CA, `pki/lab-ca.crt`), with a throwaway login; pushed digest checked against upstream. |
 | Sign and attest | cosign 3.1.3 | Signature on the index digest and the SPDX SBOM as an in-toto attestation (`spdxjson`), lab key (`pki/cosign.pub`), no transparency log. Both verified before the script succeeds; skipped if already valid. |
 
+Locally built images (11/24, for local-agents' agent image, built with crane
+and no daemon): `make image IMAGE=oci-layout:<dir> NAME=<repo>:<tag>`. The
+resolve-and-pull step is skipped; the digest is the layout's single
+manifest; SBOM, gate, push, signature and attestation are the same steps.
+
 Outputs (OCI layout, SBOMs, scan reports, verification results) land in
 `build/images/<repo>/<digest>/`, which is not committed.
 

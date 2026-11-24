@@ -61,7 +61,7 @@ Decisions are recorded in [adr/](adr/); results in the
 |---|---|---|---|
 | Zot | v2.1.23 (chart 0.1.134) | In-cluster OCI registry; anonymous read, `admin` push; NodePort 30500 for the node, TLS ingress for the host | Single binary, OCI-native, small ([ADR 0006](adr/0006-zot-registry.md)) |
 | Lab CA | ECDSA P-384 (`scripts/lab-pki.sh`) | Signs the registry's TLS certificate; trusted through `SSL_CERT_FILE` only | No system-wide trust changes on the host |
-| crane | go-containerregistry | Resolves digests, pulls whole indexes (all platforms) as OCI layouts, pushes with the digest unchanged | Byte-for-byte copies, so the upstream digest is the deployed digest |
+| crane | go-containerregistry 0.22.1 (Arch package `crane 0.22.1-1`; `crane version` prints `(devel)`) | Resolves digests, pulls whole indexes (all platforms) as OCI layouts, pushes with the digest unchanged; publishes locally built OCI layouts (local-agents' crane build, 11/24) | Byte-for-byte copies, so the upstream digest is the deployed digest |
 | Syft | 1.55.0 | SPDX 2.3 and CycloneDX SBOMs per image | Standard formats; SPDX is attached as an attestation |
 | Trivy | 0.76.2 | Vulnerability scan and the gate: fail on any fixable CRITICAL; exceptions in `.trivyignore.yaml` with a statement each | Fast, offline-capable DB, path-scoped ignores |
 | cosign | v3.1.3 | Signs the index digest and attaches the SBOM attestation with a local key pair; no Rekor; tag-based `.sig`/`.att` | Verifiable offline, format supported by Kyverno and Zarf ([ADR 0007](adr/0007-supply-chain-signing.md)) |
