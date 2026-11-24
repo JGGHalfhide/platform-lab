@@ -20,8 +20,9 @@ module "build_node" {
 
 # Disconnected target VM. Was a stand-in for the iMac (8 GB) used to rehearse
 # docs/airgap-runbook.md; since 11/21 it is the airgap target for
-# local-airgap-LLM, sized for inference (8 vCPU, 12 GiB). Egress is blocked on
-# the guest by the same step as on the iMac. Off unless airgap_rehearsal = true.
+# local-airgap-LLM, sized for inference; since 11/23 also for local-agents
+# (12 vCPU, 20 GiB, like the build node: run one at a time). Egress is blocked
+# on the guest by the same step as on the iMac. Off unless airgap_rehearsal = true.
 module "airgap_rehearsal" {
   source = "./modules/rocky-vm"
   count  = var.airgap_rehearsal ? 1 : 0

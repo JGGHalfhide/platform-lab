@@ -40,15 +40,15 @@ variable "mac_address" {
 }
 
 variable "vcpus" {
-  description = "Number of virtual CPUs (8 for llama.cpp inference, local-airgap-LLM docs/resource-plan.md)."
+  description = "Number of virtual CPUs (12: llama.cpp inference plus the agents, tools and embeddings next to it; local-agents docs/resource-plan.md). Leaves 4 of the host's 16 threads for host builds."
   type        = number
-  default     = 8
+  default     = 12
 }
 
 variable "memory_mib" {
-  description = "Memory in MiB (16 GiB for the platform plus a 32k-context inference pod, local-airgap-LLM docs/resource-plan.md). With the rehearsal VM at 16 GiB too, the two exceed the host's 28 GiB: run one at a time."
+  description = "Memory in MiB (20 GiB for the platform, a 32k-context inference pod and the agent stack; local-agents docs/resource-plan.md). One VM leaves the host about 5 GiB of its 28 GiB; the two VMs together (40 GiB) do not fit: run one at a time."
   type        = number
-  default     = 16384
+  default     = 20480
 }
 
 variable "disk_size_gib" {
@@ -93,15 +93,15 @@ variable "rehearsal_mac_address" {
 }
 
 variable "rehearsal_vcpus" {
-  description = "Virtual CPUs for the rehearsal VM (the airgap target for local-airgap-LLM)."
+  description = "Virtual CPUs for the rehearsal VM (the airgap target for local-airgap-LLM and local-agents); same as the build node."
   type        = number
-  default     = 8
+  default     = 12
 }
 
 variable "rehearsal_memory_mib" {
-  description = "Memory in MiB for the rehearsal VM; same size as the build node, for the platform plus a 32k-context inference pod (local-airgap-LLM docs/resource-plan.md). Do not run it together with the build node."
+  description = "Memory in MiB for the rehearsal VM; same size as the build node, for the platform, a 32k-context inference pod and the agent stack (local-agents docs/resource-plan.md). Never run it together with the build node: 2 x 20 GiB exceeds the host's 28 GiB."
   type        = number
-  default     = 16384
+  default     = 20480
 }
 
 variable "rehearsal_disk_size_gib" {

@@ -197,6 +197,14 @@ had moved), registry_env_cleanup exit status (e57978f); zarf role stops on unrea
 and `zarf init` cannot be re-run once the Kyverno policies are deployed (injector denied by
 restrict-image-registries; open question in ROADMAP, docs/airgap-runbook.md section 5). After a VM
 boot, let etcd/kube-apiserver settle before deploying.
+For local-agents (Phase 3, 11/23): both VMs 12 vCPU / 20 GiB (vcpus, memory_mib, rehearsal_*; local-agents
+docs/resource-plan.md), still ONE AT A TIME: one VM leaves the host about 5 GiB of 28 GiB, two (40 GiB)
+do not fit. Applied per VM with the other shut off: `terraform apply -target=module.<vm>
+-var airgap_rehearsal=true`, because both modules set running = true, so `make up` / a full apply
+starts BOTH VMs (fix to plan: a per-VM running variable). Snag found: after a host reboot every apply
+replaces each VM's cloud-init seed volume, because the libvirt provider keeps the generated ISO in
+/tmp/terraform-provider-libvirt-cloudinit/ (tmpfs on the host); same content and instance-id, so
+cloud-init does not re-run and the root disk is untouched.
 See ROADMAP.md for the checklist.
 Note: in Claude Code sessions run ansible with `</dev/null` (non-blocking IO error otherwise).
 Note: zarf on the airgap node is /opt/zarf/zarf (not on sudo's secure_path).
