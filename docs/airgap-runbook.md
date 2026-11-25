@@ -377,3 +377,19 @@ egress blocked and no image pull errors.
   check) and creates a 20Gi registry volume (was 10Gi) for the model.
   `scripts/airgap-packages.sh` builds another repo's packages through
   `ZARF_SRC`. Results: local-airgap-LLM `docs/airgap-runbook.md`.
+
+### local-agents on the rehearsal VM (11/25)
+
+local-agents deploys its status reporter through this flow (its
+`make airgap-deploy` passes llm, llm-smoke and agents as
+`zarf_extra_packages`). For it: monitoring 0.8.0 (Tempo, the Grafana Tempo
+datasource, the local-agents dashboard) and policies 0.8.0
+(`docker.io/grafana/tempo:` in `platform-bootstrap-images`; with 0.7.0
+Kyverno denied the Tempo StatefulSet). Found on the way: the zarf role pins
+each package's version in `ansible/roles/zarf/defaults/main.yml`, so a
+version bump in `zarf/<pkg>/zarf.yaml` needs the pin bumped too (the first
+deploy reran monitoring 0.7.0); and a package built from a kustomization
+(`zarf/policies` reads `gitops/policies`) goes stale when those sources
+change. At each boot KEDA's pods pull before the Zarf registry pod is Ready
+(9 pull-error events per boot, recovered within seconds). Results:
+local-agents `docs/airgap-runbook.md`.
