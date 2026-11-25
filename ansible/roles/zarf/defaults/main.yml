@@ -18,7 +18,7 @@ zarf_packages:
   - name: sample-app
     version: 0.6.0
   - name: monitoring
-    version: 0.7.0
+    version: 0.8.0
   - name: keda
     version: 0.8.0
 

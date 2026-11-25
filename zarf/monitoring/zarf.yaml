@@ -8,7 +8,7 @@
 kind: ZarfPackageConfig
 metadata:
   name: monitoring
-  description: Prometheus, Grafana, Loki and Alloy with the platform dashboards
+  description: Prometheus, Grafana, Loki, Alloy and Tempo with the platform dashboards
   version: 0.8.0
   architecture: amd64
 
