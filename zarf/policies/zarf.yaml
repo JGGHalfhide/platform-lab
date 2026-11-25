@@ -6,7 +6,7 @@ kind: ZarfPackageConfig
 metadata:
   name: policies
   description: Kyverno policies (PSS restricted, CIS/STIG mappings, image signatures)
-  version: 0.7.0
+  version: 0.8.0
   architecture: amd64
 
 components:

@@ -14,7 +14,7 @@ zarf_packages:
   - name: platform
     version: 0.6.0
   - name: policies
-    version: 0.7.0
+    version: 0.8.0
   - name: sample-app
     version: 0.6.0
   - name: monitoring
