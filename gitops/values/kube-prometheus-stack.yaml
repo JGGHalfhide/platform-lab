@@ -252,6 +252,12 @@ grafana:
           type: loki
           url: http://loki.monitoring.svc:3100
           access: proxy
+        # Traces from local-agents (gitops/values/tempo.yaml).
+        - name: Tempo
+          uid: tempo
+          type: tempo
+          url: http://tempo.monitoring.svc:3200
+          access: proxy
   # Only the dashboard sidecar; it watches ConfigMaps labelled
   # grafana_dashboard (API access, projected token) and Grafana re-reads the
   # files itself, so no reload call with the admin login.

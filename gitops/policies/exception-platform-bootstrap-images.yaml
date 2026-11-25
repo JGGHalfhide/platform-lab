@@ -41,7 +41,7 @@ spec:
     # the platform registry instead (gitops/velero/restore-helper-config.yaml).
     - "docker.io/velero/velero:"
     - "docker.io/velero/velero-plugin-for-aws:"
-    # monitoring, monitoring-node (kube-prometheus-stack, Loki, Alloy)
+    # monitoring, monitoring-node (kube-prometheus-stack, Loki, Alloy, Tempo)
     - "quay.io/prometheus/prometheus:"
     - "quay.io/prometheus-operator/prometheus-operator:"
     - "quay.io/prometheus-operator/prometheus-config-reloader:"
@@ -51,6 +51,7 @@ spec:
     - "quay.io/kiwigrid/k8s-sidecar:"
     - "docker.io/grafana/loki:"
     - "docker.io/grafana/alloy:"
+    - "docker.io/grafana/tempo:"
     # local-path-storage (provisioner and its helper pods)
     - "docker.io/rancher/local-path-provisioner:"
     - "docker.io/library/busybox:"

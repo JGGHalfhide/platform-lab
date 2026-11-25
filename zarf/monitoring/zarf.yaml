@@ -99,6 +99,20 @@ components:
     images:
       - docker.io/grafana/loki:3.6.11
 
+  # Trace store for local-agents (its ADR 0008).
+  - name: tempo
+    required: true
+    charts:
+      - name: tempo
+        version: 3.2.1
+        url: https://grafana-community.github.io/helm-charts
+        namespace: monitoring
+        releaseName: tempo
+        valuesFiles:
+          - ../../gitops/values/tempo.yaml
+    images:
+      - docker.io/grafana/tempo:3.1.1@sha256:64e2fbd56d9c2b3412a4b430a58ea59e91a670b1e75f920a0c702213ad145044
+
   - name: alloy
     required: true
     charts:

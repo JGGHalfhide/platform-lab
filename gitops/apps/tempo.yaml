@@ -1,0 +1,37 @@
+# tempo (grafana-community chart 3.2.1, Tempo 3.1.1), monitoring namespace;
+# values in gitops/values/tempo.yaml (shared with the airgapped cluster's
+# Zarf package). Trace store for local-agents (its ADR 0008); see
+# docs/observability.md. The chart moved from grafana/helm-charts
+# (deprecated there) to grafana-community/helm-charts in 2026.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tempo
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://grafana-community.github.io/helm-charts
+      chart: tempo
+      targetRevision: 3.2.1
+      helm:
+        releaseName: tempo
+        valueFiles:
+          - $repo/gitops/values/tempo.yaml
+    # Source of the chart values ($repo) only.
+    - repoURL: https://github.com/JGGHalfhide/platform-lab.git
+      targetRevision: main
+      ref: repo
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 10
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m

@@ -1,0 +1,50 @@
+# Tempo values (grafana-community chart 3.2.1, Tempo 3.1.1), build cluster
+# (gitops/apps/tempo.yaml); shared with the airgapped cluster's Zarf package.
+#
+# Trace store for local-agents (its ADR 0008): every model call and tool
+# call of the status reporter, sent as OTLP/HTTP. Same layout as Loki:
+# one single-binary pod, filesystem storage on a local-path volume, no
+# object store, no caches. Only the OTLP/HTTP receiver (:4318) and the query
+# API (:3200, Grafana's datasource) are used. Tempo never calls the
+# Kubernetes API, so no token. Usage reporting off: no egress, and the
+# airgapped cluster has none.
+tempo:
+  tag: "3.1.1@sha256:64e2fbd56d9c2b3412a4b430a58ea59e91a670b1e75f920a0c702213ad145044"
+  reportingEnabled: false
+  retention: 168h
+  receivers:
+    otlp:
+      protocols:
+        http:
+          endpoint: "0.0.0.0:4318"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+
+# Pod security context (the chart's name for it).
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+serviceAccount:
+  automountServiceAccountToken: false
+
+persistence:
+  enabled: true
+  size: 2Gi
+  storageClassName: local-path
+
+tempoQuery:
+  enabled: false
