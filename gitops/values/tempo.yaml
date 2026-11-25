@@ -17,12 +17,18 @@ tempo:
       protocols:
         http:
           endpoint: "0.0.0.0:4318"
+  # 11/25: OOMKilled twice at a 512Mi limit while ~20 traces were read in a
+  # row (idle 46Mi; each read kept memory). Go does not see the container
+  # limit, so GOMEMLIMIT (~80% of it) makes the GC reclaim before the kill.
   resources:
     requests:
       cpu: 50m
-      memory: 128Mi
+      memory: 256Mi
     limits:
-      memory: 512Mi
+      memory: 1Gi
+  extraEnv:
+    - name: GOMEMLIMIT
+      value: 800MiB
   securityContext:
     allowPrivilegeEscalation: false
     readOnlyRootFilesystem: true
