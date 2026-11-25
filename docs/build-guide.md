@@ -217,7 +217,11 @@ Needs Parts 1 and 2. platform-lab's root app includes the Application
    ```
 
    Pin the printed digest in `deploy/agents/status-reporter.yaml` (a fork
-   commits it; Argo CD syncs `deploy/`).
+   commits it; Argo CD syncs `deploy/`). To rebuild the image the repo
+   already pins (after a rebuild, the registry is empty), build at the
+   commit named in that file instead of HEAD (`git checkout <commit>`
+   first): the digest includes the commit, and the result must equal the
+   pinned digest byte for byte.
 
 2. **Run a status report:**
 
@@ -275,7 +279,16 @@ steps and results:
   step 5). After a boot, components that start before Kyverno or the
   registry log failures that recover seconds later.
 - **The registry starts empty after a rebuild:** republish every image by
-  tag@digest; a tag alone can move upstream.
+  tag@digest; a tag alone can move upstream. Argo CD deploys before the
+  images are there, so Kyverno logs `evaluation error` PolicyViolation
+  events for those minutes (145 in the v1.0 rebuild). They stop once the
+  images exist and expire within an hour; wait for that before evaluating
+  the agent, or it reports them.
+- **A freshly booted node needs time before you judge it.** System pods
+  restart once while it boots and a CPU-only model is slower for about 20
+  minutes. The agent treats earlier restarts as history only after 10
+  minutes of running, so its eval waits until no restarted container has
+  run for less than that.
 - **`zarf init` cannot be re-run** on the airgapped node once the Kyverno
   policies are there; an interrupted init means a fresh VM.
 - **Bump a Zarf package's version in two places:** its `zarf.yaml` and
