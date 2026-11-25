@@ -25,3 +25,9 @@ configMapGenerator:
     namespace: monitoring
     files:
       - dashboards/policy-reports.json
+  # The local-agents status reporter, from its traces in Tempo (TraceQL
+  # metrics; local-agents ADR 0008).
+  - name: dashboard-local-agents
+    namespace: monitoring
+    files:
+      - dashboards/local-agents.json
