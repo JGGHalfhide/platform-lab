@@ -13,9 +13,10 @@ values are meant for the airgapped cluster's Zarf package.
 | node-exporter | (subchart) v1.12.1 | `monitoring-node` | the only pod with host access |
 | Loki | loki 7.5.0 (Loki 3.6.11) | `monitoring` | single binary, filesystem on a 5 Gi local-path volume, 7 days |
 | Alloy | alloy 1.15.0 (Alloy v1.21.3) | `monitoring` | pod logs and Kubernetes events through the API |
+| Tempo | grafana-community/tempo 3.2.1 (Tempo 3.1.1) | `monitoring` | traces for local-agents (its ADR 0008: metadata only); single binary, OTLP/HTTP :4318, filesystem on a 2 Gi local-path volume, 7 days; Grafana datasource; 29 MiB idle, 152 MiB after one agent run (local-agents docs/scans/week4-tracing.txt) |
 
 All through Argo CD (`gitops/apps/kube-prometheus-stack.yaml`, `loki.yaml`,
-`alloy.yaml`), values in `gitops/values/`. Off: Alertmanager (no receiver
+`alloy.yaml`, `tempo.yaml`), values in `gitops/values/`. Off: Alertmanager (no receiver
 yet), the operator's admission webhooks and their certificate Jobs, Grafana's
 test pod and default dashboards, Loki's caches, gateway, canary and
 self-monitoring.

@@ -94,6 +94,7 @@ Decisions are recorded in [adr/](adr/); results in the
 | Grafana | 13.3.0 (subchart) | Dashboards for node, etcd and policy reports from `gitops/monitoring/dashboards/`; admin password from Vault via a file | Dashboards as code |
 | Loki | 3.6.11 (chart 7.5.0) | Log store, single binary on a filesystem volume, 7 days | Smallest Loki mode, fits 8 GB |
 | Alloy | v1.21.3 (chart 1.15.0) | Pod logs and Kubernetes events through the API, no `hostPath` | Promtail is end-of-life; API collection avoids host access |
+| Tempo | 3.1.1 (grafana-community chart 3.2.1) | Trace store for local-agents (OTLP/HTTP), single binary on a local-path volume, 7 days; Grafana datasource | Fits the Grafana stack, airgap-capable; chosen in local-agents ADR 0008 (11/25) |
 
 ### Recovery
 
