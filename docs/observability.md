@@ -13,7 +13,7 @@ values are meant for the airgapped cluster's Zarf package.
 | node-exporter | (subchart) v1.12.1 | `monitoring-node` | the only pod with host access |
 | Loki | loki 7.5.0 (Loki 3.6.11) | `monitoring` | single binary, filesystem on a 5 Gi local-path volume, 7 days |
 | Alloy | alloy 1.15.0 (Alloy v1.21.3) | `monitoring` | pod logs and Kubernetes events through the API |
-| Tempo | grafana-community/tempo 3.2.1 (Tempo 3.1.1) | `monitoring` | traces for local-agents (its ADR 0008: metadata only); single binary, OTLP/HTTP :4318, filesystem on a 2 Gi local-path volume, 7 days; Grafana datasource; 29 MiB idle, 152 MiB after one agent run (local-agents docs/scans/week4-tracing.txt) |
+| Tempo | grafana-community/tempo 3.2.1 (Tempo 3.1.1) | `monitoring` | traces for local-agents (its ADR 0008: metadata only); single binary, OTLP/HTTP :4318, filesystem on a 2 Gi local-path volume, 7 days; Grafana datasource; 46 MiB idle; OOMKilled twice at a 512 MiB limit under repeated trace reads, so limit 1 GiB with GOMEMLIMIT 800MiB (a7ecf2c): 26 reads in a row, 618 MiB seen, no restart (local-agents docs/scans/week4-tempo-memory.txt); also the local-agents dashboard (gitops/monitoring/dashboards/local-agents.json) |
 
 All through Argo CD (`gitops/apps/kube-prometheus-stack.yaml`, `loki.yaml`,
 `alloy.yaml`, `tempo.yaml`), values in `gitops/values/`. Off: Alertmanager (no receiver
